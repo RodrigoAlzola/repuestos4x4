@@ -18,7 +18,7 @@ SECRET_KEY = 'django-insecure-zigq5sfha!!21l!2!wo!8qf2s8c%fxz0d*%zfifa^3_fh5#4su
 DEBUG = True
 
 ALLOWED_HOSTS = ['repuestos4x4-production.up.railway.app', 'https://repuestos4x4-production.up.railway.app']
-CSRF_TRUSTED_ORIGINS = ['repuestos4x4-production.up.railway.app', 'https://repuestos4x4-production.up.railway.app']
+CSRF_TRUSTED_ORIGINS = ['https://repuestos4x4-production.up.railway.app']
 
 
 # Application definition
