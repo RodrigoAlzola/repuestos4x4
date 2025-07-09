@@ -17,7 +17,7 @@ SECRET_KEY = 'django-insecure-zigq5sfha!!21l!2!wo!8qf2s8c%fxz0d*%zfifa^3_fh5#4su
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['https://repuesto4x4.com', 'repuestos4x4-production.up.railway.app', 'https://repuestos4x4-production.up.railway.app']
+ALLOWED_HOSTS = ['https://repuesto4x4.com', 'repuesto4x4.com', 'repuestos4x4-production.up.railway.app', 'https://repuestos4x4-production.up.railway.app']
 CSRF_TRUSTED_ORIGINS = ['https://repuesto4x4.com', 'https://repuestos4x4-production.up.railway.app']
 
 
