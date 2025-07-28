@@ -11,6 +11,9 @@ import datetime
 def payment_success(request):
     return render(request, "payment/payment_success.html", {})
 
+def payment_failed(request):
+    return render(request, "payment/payment_failed.html", {})
+
 def checkout(request):
      # Get the cart
     cart = Cart(request)

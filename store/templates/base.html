@@ -15,28 +15,51 @@
         <!-- Core theme CSS (includes Bootstrap)-->
         <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
         <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+        <style>
+            html, body {
+                height: 100%;
+                margin: 0;
+            }
+
+            .page-wrapper {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+            }
+
+            main.content {
+                flex: 1;
+            }
+        </style>
     </head>
     <body>
-        {% include 'navbar.html' %}
+        <div class="page-wrapper">
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            {% include 'navbar.html' %}
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <main class="content">
+                {% block content %}
+                {% endblock %}
+            </main>
+
+            <!-- Footer -->
+            <footer class="py-5 bg-dark">
+                <div class="container">
+                    <p class="m-0 text-center text-white">Copyright &copy; 4x4MAx 2025</p>
                 </div>
+            </footer>
+        </div>
 
-            {% endfor %}
-
-        {% endif %}
-        
-        {% block content %}
-        {% endblock %}
-
-        <!-- Footer-->
-        <footer class="py-5 bg-dark">
-            <div class="container"><p class="m-0 text-center text-white">Copyright &copy; 4x4MAx 2025</p></div>
-        </footer>
         <!-- Bootstrap core JS-->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Core theme JS-->
