@@ -1,61 +1,136 @@
 {% extends 'base.html' %}
-
 {% block content %}
 
 <div class="container">
-    <br/><br/>
+  <br/>
+  <div class="card mb-3">
+    <div class="row g-0">
+      <div class="col-md-4">
+        <img src="{{ product.image }}" class="img-fluid rounded-start" alt="Imagen del producto">
+      </div>
+      <div class="col-md-8">
+        <div class="card-body">
+          <h5 class="card-title">{{ product.name }}</h5>
+          <p class="card-text">{{ product.description }}</p>
 
-    <div class="card mb-3">
-  <div class="row g-0">
-    <div class="col-md-4">
-      <img src="{{ product.image }}" class="img-fluid rounded-start" alt="...">
-    </div>
-    <div class="col-md-8">
-      <div class="card-body">
-            
-        <br/><br/>
-        <h5 class="card-title">{{ product.name }}</h5>
-        <p class="card-text">{{ product.description }}</p>
-<br/>
-        {% if product.is_sale %}
-                <!-- Product price-->
-                                    <strike>
-                                    $ {{ product.price }}
-                                    </strike>
-                                    &nbsp
-                                    $ {{ product.sale_price }}
-            {% else %}
-                $ {{ product.price }}
+          <ul class="list-group list-group-flush">
+           <!-- <li class="list-group-item"><strong>Part Number:</strong> {{ product.part_number }}</li>-->
+            {% if product.motor %}
+              <li class="list-group-item"><strong>Motor:</strong> {{ product.motor }}</li>
             {% endif %}
-            <br/><br/>
-            <div class="row justify-content-center">
-              <div class="col-md-2"> Quantity:</div>
-              <div class="col-md-2">
-            <select class="form-select form-select-sm" id="quantity-cart">
-  <option value="1">1</option>
-  <option value="2">2</option>
-  <option value="3">3</option>
-  <option value="4">4</option>
-  <option value="5">5</option>
-</select>
-</div>
-            </div>
-<br/><br/><br/><br/>
+            <li class="list-group-item"><strong>Weight (kg):</strong> {{ product.weight_kg }}</li>
+            <li class="list-group-item"><strong>Dimensions (cm):</strong> {{ product.length_cm }} x {{ product.width_cm }} x {{ product.height_cm }}</li>
+            <li class="list-group-item"><strong>Volume (m³):</strong> {{ product.volume_m3 }}</li>
+            <li class="list-group-item"><strong>Stock:</strong> {{ product.stock }}</li>
+          </ul>
 
-        <a href="{% url 'home' %}" class="btn btn-secondary">Home</a>
-        <button type=button value="{{ product.id }}" class="btn btn-secondary" id="add-cart">Add To Cart</button>
+      
+          <div class="text-end">
+  {% if product.is_sale %}
+    <p class="fs-4 text-danger">
+      <strike class="text-muted">$ {{ product.price }}</strike><br/>
+      <strong>$ Precio: {{ product.sale_price }}</strong>
+    </p>
+  {% else %}
+    <p class="fs-4 text-dark"><strong>$ Precio: {{ product.price }}</strong></p>
+  {% endif %}
+</div>
+
+          <br/>
+          <!-- Compatibilidad seleccionada -->
+          <h6>Compatibilidad seleccionada:</h6>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="brand-select">Marca:</label>
+              <select id="brand-select" class="form-select" disabled>
+                <option value="">-- Selecciona una marca --</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="model-select">Modelo:</label>
+              <select id="model-select" class="form-select" disabled>
+                <option value="">-- Selecciona un modelo --</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="serie-select">Serie:</label>
+              <select id="serie-select" class="form-select" disabled>
+                <option value="">-- Selecciona una serie --</option>
+              </select>
+            </div>
+          </div>
+<br/>
+<!-- Cantidad -->
+<div class="row justify-content-end">
+  <div class="col-md-4 text-end">
+    <label for="quantity-cart" class="form-label fw-bold">Cantidad:</label>
+    {% if product.stock > 0 %}
+      <select class="form-select form-select-sm w-auto d-inline-block" id="quantity-cart">
+        {% for i in quantity_range %}
+          <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <p class="text-danger">Producto sin stock disponible.</p>
+    {% endif %}
+  </div>
+</div>
+
+
+    
+          <div class="text-end">
+  <button type="button" value="{{ product.id }}" class="btn btn-danger" id="add-cart">
+    Add To Cart
+  </button>
+</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+<br/>
 
-</div>
+<!-- Script para compatibilidad seleccionada -->
+<script>
+  const compatData = {{ compat_data|safe }};
+  const selectedBrand = "{{ selected_brand }}";
+  const selectedModel = "{{ selected_model }}";
+  const selectedSerie = "{{ selected_serie }}";
 
+  const brandSelect = document.getElementById('brand-select');
+  const modelSelect = document.getElementById('model-select');
+  const serieSelect = document.getElementById('serie-select');
 
- <br/><br/><br/><br/>
+  // Cargar marcas
+  for (const brand in compatData) {
+    const option = new Option(brand, brand);
+    if (brand === selectedBrand) option.selected = true;
+    brandSelect.appendChild(option);
+  }
 
- <script>
- // Check that the button is press
+  // Cargar modelos si hay marca seleccionada
+  if (selectedBrand && compatData[selectedBrand]) {
+    modelSelect.disabled = false;
+    for (const model in compatData[selectedBrand]) {
+      const option = new Option(model, model);
+      if (model === selectedModel) option.selected = true;
+      modelSelect.appendChild(option);
+    }
+  }
+
+  // Cargar series si hay modelo seleccionada
+  if (selectedBrand && selectedModel && compatData[selectedBrand][selectedModel]) {
+    serieSelect.disabled = false;
+    compatData[selectedBrand][selectedModel].forEach(serie => {
+      const option = new Option(serie, serie);
+      if (serie === selectedSerie) option.selected = true;
+      serieSelect.appendChild(option);
+    });
+  }
+</script>
+
+<!-- Script para agregar al carrito -->
+<script>
 $(document).on('click', '#add-cart', function(e){
   e.preventDefault();
   $.ajax({
@@ -67,22 +142,15 @@ $(document).on('click', '#add-cart', function(e){
       csrfmiddlewaretoken: '{{ csrf_token }}',
       action: 'post'
     },
-
     success: function(json){
-      //console.log(json)
-      document.getElementById("cart_quantity").
-        textContent = json.quantity
-        location.reload();
+      document.getElementById("cart_quantity").textContent = json.quantity;
+      location.reload();
     },
-
     error: function(xhr, errmsg, err){
-
+      console.log("Error al agregar al carrito");
     }
-
   });
-})
-
- </script>
-
+});
+</script>
 
 {% endblock %}

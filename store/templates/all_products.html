@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<header class="bg-dark py-5">
+  <div class="container px-4 px-lg-5 my-5">
+    <div class="text-center text-white">
+      <h1 class="display-4 fw-bolder">All Products</h1>
+      <p class="lead fw-normal text-white-50 mb-0">Browse and filter by category or compatibility</p>
+    </div>
+  </div>
+</header>
+
+<div class="container mt-4">
+  <div class="row">
+    <!-- Filtros -->
+    <div class="col-md-3">
+      <form method="get" id="filter-form">
+        <h5>Buscar productos</h5>
+  <input type="text" name="search" class="form-control mb-3" placeholder="Buscar por nombre o descripción" value="{{ search_query }}">
+
+        <h5>Filtrar por categoría</h5>
+        <select name="category" class="form-select mb-3">
+          <option value="">-- Todas --</option>
+          {% for cat in categories %}
+            <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+
+        <h5>Filtrar por compatibilidad</h5>
+        <label>Marca:</label>
+        <select name="brand" id="brand-select" class="form-select mb-2">
+          <option value="">-- Todas --</option>
+        </select>
+
+        <label>Modelo:</label>
+        <select name="model" id="model-select" class="form-select mb-2" disabled>
+          <option value="">-- Todas --</option>
+        </select>
+
+        <label>Serie:</label>
+        <select name="serie" id="serie-select" class="form-select mb-3" disabled>
+          <option value="">-- Todas --</option>
+        </select>
+
+        <button type="submit" class="btn btn-primary w-100">Aplicar filtros</button>
+      </form>
+    </div>
+
+    <!-- Productos -->
+    <div class="col-md-9">
+      <div class="row">
+        {% for product in page_obj %}
+          <div class="col-md-4 mb-4">
+            <div class="card h-100">
+              <img src="{{ product.image }}" class="card-img-top" alt="{{ product.name }}">
+              <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text">{{ product.description|truncatewords:15 }}</p>
+              <!--<a href="{% url 'product' product.id %}" class="btn btn-outline-dark">Ver más</a> -->
+              <a href="{% url 'product' product.id %}?{% if selected_brand %}brand={{ selected_brand }}&{% endif %}{% if selected_model %}model={{ selected_model }}&{% endif %}{% if selected_serie %}serie={{ selected_serie }}{% endif %}" class="btn btn-outline-dark">Ver más</a>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <p>No se encontraron productos con los filtros seleccionados.</p>
+        {% endfor %}
+      </div>
+
+      <!-- Paginación -->
+      <nav>
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+            </li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Script para filtros en cascada -->
+<script>
+  const compatData = {{ compat_data|safe }};
+  const brandSelect = document.getElementById('brand-select');
+  const modelSelect = document.getElementById('model-select');
+  const serieSelect = document.getElementById('serie-select');
+
+  // Cargar marcas
+  for (const brand in compatData) {
+    const option = document.createElement('option');
+    option.value = brand;
+    option.textContent = brand;
+    if (brand === "{{ selected_brand }}") option.selected = true;
+    brandSelect.appendChild(option);
+  }
+
+  function loadModels(brand) {
+    modelSelect.innerHTML = '<option value="">-- Todas --</option>';
+    serieSelect.innerHTML = '<option value="">-- Todas --</option>';
+    serieSelect.disabled = true;
+
+    if (brand && compatData[brand]) {
+      modelSelect.disabled = false;
+      for (const model in compatData[brand]) {
+        const option = document.createElement('option');
+        option.value = model;
+        option.textContent = model;
+        if (model === "{{ selected_model }}") option.selected = true;
+        modelSelect.appendChild(option);
+      }
+    } else {
+      modelSelect.disabled = true;
+    }
+  }
+
+  function loadSeries(brand, model) {
+    serieSelect.innerHTML = '<option value="">-- Todas --</option>';
+    if (brand && model && compatData[brand][model]) {
+      serieSelect.disabled = false;
+      compatData[brand][model].forEach(serie => {
+        const option = document.createElement('option');
+        option.value = serie;
+        option.textContent = serie;
+        if (serie === "{{ selected_serie }}") option.selected = true;
+        serieSelect.appendChild(option);
+      });
+    } else {
+      serieSelect.disabled = true;
+    }
+  }
+
+  brandSelect.addEventListener('change', () => {
+    loadModels(brandSelect.value);
+  });
+
+  modelSelect.addEventListener('change', () => {
+    loadSeries(brandSelect.value, modelSelect.value);
+  });
+
+  // Cargar modelos y series si ya hay selección
+  if ("{{ selected_brand }}") {
+    loadModels("{{ selected_brand }}");
+    if ("{{ selected_model }}") {
+      loadSeries("{{ selected_brand }}", "{{ selected_model }}");
+    }
+  }
+</script>
+
+{% endblock %}

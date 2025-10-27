@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect
-from .models import Product, Category, Profile
+from .models import Product, Category, Profile, Compatibility
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+from django.core.paginator import Paginator
 from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
 from payment.forms import ShippingForm
 from payment.models import ShippingAddress
@@ -132,7 +133,28 @@ def update_info(request):
 
 def product(request, pk):
     product = Product.objects.get(id=pk)
-    return render(request, 'product.html', {'product': product})
+
+    # Agrupar compatibilidades
+    compat_data = {}
+    for comp in product.compatibilities.all():
+        brand = comp.brand.strip()
+        model = comp.model.strip()
+        serie = comp.serie.strip()
+        compat_data.setdefault(brand, {}).setdefault(model, []).append(serie)
+
+    # Capturar filtros seleccionados desde GET
+    selected_brand = request.GET.get('brand', '')
+    selected_model = request.GET.get('model', '')
+    selected_serie = request.GET.get('serie', '')
+
+    return render(request, 'product.html', {
+        'product': product,
+        'compat_data': compat_data,
+        'quantity_range': range(1, product.stock + 1),
+        'selected_brand': selected_brand,
+        'selected_model': selected_model,
+        'selected_serie': selected_serie,
+    })
 
 def category(request, foo):
     foo = foo.replace('-', ' ')
@@ -145,7 +167,66 @@ def category(request, foo):
     except:
         messages.success(request, ("That  Category doesn't exist."))
         return redirect('home')
-    
+
+
+def all_products(request):
+    # Filtros desde GET
+    selected_category = request.GET.get('category')
+    selected_brand = request.GET.get('brand')
+    selected_model = request.GET.get('model')
+    selected_serie = request.GET.get('serie')
+    search_query = request.GET.get('search', '')
+
+    products = Product.objects.all()
+
+    # Aplicar búsqueda
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    # Aplicar filtros
+    if selected_category:
+        products = products.filter(category__name=selected_category)
+
+    if selected_brand:
+        products = products.filter(compatibilities__brand=selected_brand)
+
+    if selected_model:
+        products = products.filter(compatibilities__model=selected_model)
+
+    if selected_serie:
+        products = products.filter(compatibilities__serie=selected_serie)
+
+    products = products.distinct()
+
+    # Paginación
+    paginator = Paginator(products, 30)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Datos para filtros
+    categories = Category.objects.all()
+    compat_data = {}
+    for comp in Compatibility.objects.all():
+        brand = comp.brand.strip()
+        model = comp.model.strip()
+        serie = comp.serie.strip()
+        compat_data.setdefault(brand, {}).setdefault(model, []).append(serie)
+
+    return render(request, 'all_products.html', {
+        'page_obj': page_obj,
+        'categories': categories,
+        'compat_data': compat_data,
+        'selected_category': selected_category,
+        'selected_brand': selected_brand,
+        'selected_model': selected_model,
+        'selected_serie': selected_serie,
+        'search_query': search_query,
+    })
+
+
 def category_summary(request):
     categories = Category.objects.all()
     return render(request, 'category_summary.html', {"categories": categories})

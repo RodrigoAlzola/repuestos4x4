@@ -50,12 +50,33 @@ class Customer(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
+    part_number = models.CharField(max_length=50, default='', blank=True, null=True)
     price = models.DecimalField(default=0, decimal_places=2, max_digits=10)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, default=1)
     description = models.CharField(max_length=250, default='', blank=True, null=True)
     image = models.URLField(max_length=500, blank=True, null=True) # models.ImageField(upload_to='uploads/product/')
     is_sale = models.BooleanField(default=False)
     sale_price = models.DecimalField(default=0, decimal_places=2, max_digits=10)
+    weight_kg = models.DecimalField(default=0, decimal_places=3, max_digits=10)
+    length_cm = models.DecimalField(default=0, decimal_places=3, max_digits=10)
+    height_cm = models.DecimalField(default=0, decimal_places=3, max_digits=10)
+    width_cm = models.DecimalField(default=0, decimal_places=3, max_digits=10)
+    volume_m3 = models.DecimalField(default=0, decimal_places=6, max_digits=15)
+    motor = models.CharField(max_length=100, default='', blank=True, null=True)
+    stock = models.IntegerField(default=0)
+    tariff_code = models.CharField(max_length=50, default='', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.part_number} - {self.name}"
+
+class Compatibility(models.Model):
+    product = models.ForeignKey(Product, related_name='compatibilities', on_delete=models.CASCADE)
+    brand = models.CharField(max_length=100)
+    model = models.CharField(max_length=100)
+    serie = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.brand} {self.model} {self.serie}"
 
 # Customer Orders
 class Order(models.Model):
