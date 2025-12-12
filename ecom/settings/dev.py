@@ -11,3 +11,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+TRANSBANK_COMMERCE_CODE = os.environ.get('DEV_TRANSBANK_COMMERCE_CODE')
+TRANSBANK_API_KEY = os.environ.get('DEV_TRANSBANK_API_KEY')

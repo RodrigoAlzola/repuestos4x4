@@ -1,80 +1,146 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block content %}
-        <!-- Header-->
-        <header class="bg-dark py-5">
-            <div class="container px-4 px-lg-5 my-5">
-                <div class="text-center text-white">
-                    <h1 class="display-4 fw-bolder">Checkout</h1>
-                    <p class="lead fw-normal text-white-50 mb-0">Review your Order</p>
-                </div>
+<!-- Header -->
+<header class="bg-dark py-5">
+  <div class="container-fluid px-3 my-5">
+    <div class="text-center text-white">
+      <h1 class="display-4 fw-bolder">Checkout</h1>
+      <p class="lead fw-normal text-white-50 mb-0">Revise su Orden</p>
+    </div>
+  </div>
+</header>
+<br/>
+
+<div class="container-fluid px-3">
+  <div class="row justify-content-between">
+
+      <!-- Shipping Info centrado -->
+      <div class="col-lg-6 mx-auto">
+      <!--<form method="POST" action="{% url 'checkout' %}">-->
+    {% if user.is_authenticated %}
+      <form method="POST" action="{% url 'checkout' %}">
+        
+      {% csrf_token %}
+          <!-- Personal Info -->
+          <div class="card mb-4">
+            <div class="card-header">Personal Info</div>
+            <div class="card-body">
+              <div class="mb-0"><strong>Nombre:</strong> {{ personal_info.full_name }}</div>
+              <div class="mb-0"><strong>Teléfono:</strong> {{ personal_info.phone }}</div>
+              <div class="mb-0"><strong>Email:</strong> {{ personal_info.email }}</div>
             </div>
-        </header>
-        <br/>
-<div class="container">
-            <div class="row">
-                    <div class="col-md-6 offset-md-3">
+          </div>
 
-                        <div class="card">
-                            <div class="card-header">
-                                Order Summary
-                            </div>
-                            <div class="card-body">
-                                {% for product in cart_products %}
-                                    {{ product.name }}
+          <!-- Mensaje de destino -->
+          <div class="alert alert-info text-center">
+            {% if is_workshop_shipping %}
+              <strong>Este pedido será enviado al taller seleccionado.</strong>
+            {% else %}
+              <strong>Este pedido será enviado a tu dirección personal.</strong>
+            {% endif %}
+          </div>
 
-                                    {% if product.is_sale %}
-                                        <!-- Product price-->
-                                        
-                                        $ {{ product.price }}
-                                       
-                                        &nbsp
-                                        $ {{ product.sale_price }}
-                                    {% else %}
-                                        $ {{ product.price }}
-                                    {% endif %}
-                                <br/>
-                                <small>Quantity:</small>
-                                {% for key, value in quantities.items %}
-                    {% if key == product.id|slugify %}
-                        {{ value }}
-                    {% endif %}
-                {% endfor %}
-                
-                <br/><br/>
-
-
-
-                                {% endfor %}
-                                <strong>Total:   ${{ total }}</strong>
-                                <br/><br/>
-                                <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
-                            </div>
-                            </div>
-
-<br/><br/>
-
-<div class="card">
-  <div class="card-header">
-    Shipping Info
-  </div>
-  <div class="card-body">
-    <form method="POST" action="{% url 'billing_info' %}">
-        {% csrf_token %}
-    {{ shipping_form.as_p }}
-    
-  </div>
+                <!-- Shipping Address -->
+          <div class="card mb-0">
+            <div class="card-header">Shipping Address</div>
+            <div class="card-body">
+              {% if is_workshop_shipping %}
+                <div class="mb-1"><strong>Taller:</strong> {{ shipping_form.shipping_full_name.value }}</div>
+                <div class="mb-1"><strong>Dirección:</strong> {{ shipping_form.shipping_address1.value }}</div>
+                <div class="mb-1"><strong>Ciudad:</strong> {{ shipping_form.shipping_city.value }}</div>
+                <div class="mb-1"><strong>Estado:</strong> {{ shipping_form.shipping_state.value }}</div>
+                <div class="mb-1"><strong>Comuna:</strong> {{ shipping_form.shipping_commune.value }}</div>
+                <div class="mb-1"><strong>Código Postal:</strong> {{ shipping_form.shipping_zipcode.value }}</div>
+                <input type="hidden" name="workshop_id" value="{{ workshop_id }}">
+              {% else %}
+                <div class="mb-0">{{ shipping_form.shipping_full_name.label_tag }} {{ shipping_form.shipping_full_name }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_phone.label_tag }} {{ shipping_form.shipping_phone }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_email.label_tag }} {{ shipping_form.shipping_email }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_address1.label_tag }} {{ shipping_form.shipping_address1 }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_address2.label_tag }} {{ shipping_form.shipping_address2 }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_city.label_tag }} {{ shipping_form.shipping_city }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_state.label_tag }} {{ shipping_form.shipping_state }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_commune.label_tag }} {{ shipping_form.shipping_commune }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_zipcode.label_tag }} {{ shipping_form.shipping_zipcode }}</div>
+                <div class="mb-0">{{ shipping_form.shipping_country.label_tag }} {{ shipping_form.shipping_country }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <br><br>
+                <div class="d-flex justify-content-between">
+  <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">Back to Workshop</a>
+  <button type="submit" class="btn btn-danger">Continue</button>
 </div>
-<br/><br/>
-<button type="submit" class="btn btn-secondary">Continue</button>
+</form>
+
+      {% else %}
+      <form method="POST" action="{% url 'checkout' %}">
+        {% csrf_token %}
+      <!-- Vista para usuarios invitados -->
+          <div class="card mb-4">
+          <div class="card-header">Información de Envío</div>
+          <div class="card-body">
+            <div class="mb-1">{{ guest_user_form.full_name.label_tag }} {{ guest_user_form.full_name }}</div>
+            <div class="mb-1">{{ guest_user_form.phone.label_tag }} {{ guest_user_form.phone }}</div>
+            <div class="mb-4">{{ guest_user_form.email.label_tag }} {{ guest_user_form.email }}</div>
+            <div class="mb-1">{{ guest_user_form.address1.label_tag }} {{ guest_user_form.address1 }}</div>
+            <div class="mb-1">{{ guest_user_form.address2.label_tag }} {{ guest_user_form.address2 }}</div>
+            <div class="mb-1">{{ guest_user_form.city.label_tag }} {{ guest_user_form.city }}</div>
+            <div class="mb-1">{{ guest_user_form.state.label_tag }} {{ guest_user_form.state }}</div>
+            <div class="mb-1">{{ guest_user_form.commune.label_tag }} {{ guest_user_form.commune }}</div>
+            <div class="mb-1">{{ guest_user_form.zipcode.label_tag }} {{ guest_user_form.zipcode }}</div>
+            <div class="mb-1">{{ guest_user_form.country.label_tag }} {{ guest_user_form.country }}</div>
+          </div>
+        </div>
+        <br><br>
+                       <div class="d-flex justify-content-between">
+  <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">Back to Workshop</a>
+  <button type="submit" class="btn btn-danger">Continue</button>
+</div>
 </form>
 
 
-                    </div>
-            </div>
+      {% endif %}
+
+        <br><br>
+
+
+      
+    </div>
+
+    <!-- Order summary on the right -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          Order Summary
+        </div>
+        <div class="card-body">
+          {% for product in cart_products %}
+            <strong>{{ product.name }}</strong><br>
+            {% if product.is_sale %}
+              <strike>$ {{ product.price|currency_format }}</strike> &nbsp $ {{ product.sale_price|currency_format }}
+            {% else %}
+              $ {{ product.price|currency_format }}
+            {% endif %}
+            <br>
+            <small>Quantity:</small>
+            {% for key, value in quantities.items %}
+              {% if key == product.id|slugify %}
+                {{ value }}
+              {% endif %}
+            {% endfor %}
+            <br><br>
+          {% endfor %}
+          <strong>Total: ${{ total|currency_format }}</strong>
+          <br><br>
+          <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-
-
 
 <br/><br/>
 {% endblock %}

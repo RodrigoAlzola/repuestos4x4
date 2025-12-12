@@ -6,8 +6,10 @@ from django.db.models.signals import post_save
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=100, blank=False)
     date_modified = models.DateTimeField(User, auto_now=True)
     phone = models.CharField(max_length=20, blank=False)
+    email = models.EmailField(max_length=100, blank=False)
     address1 = models.CharField(max_length=200, blank=True)
     address2 = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=200, blank=True)
@@ -48,7 +50,26 @@ class Customer(models.Model):
         return f'{self.first_name} {self.last_name}'
 
 
+class Provider(models.Model):
+    name = models.CharField(max_length=50, blank=False)
+    contact_name = models.CharField(max_length=50, blank=False)
+    phone = models.CharField(max_length=20, blank=False)
+    email = models.CharField(max_length=20, blank=True)
+    address1 = models.CharField(max_length=200, blank=True)
+    address2 = models.CharField(max_length=200, blank=True)
+    city = models.CharField(max_length=200, blank=True)
+    state = models.CharField(max_length=200, blank=True)
+    commune = models.CharField(max_length=200, blank=True)
+    zipcode = models.CharField(max_length=200, blank=True)
+    country = models.CharField(max_length=200, blank=True)
+    logo = models.ImageField(upload_to='providers/logos/', blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
+    sku = models.CharField(max_length=50, unique=True, blank=True, null=True)
     name = models.CharField(max_length=100)
     part_number = models.CharField(max_length=50, default='', blank=True, null=True)
     price = models.DecimalField(default=0, decimal_places=2, max_digits=10)
@@ -64,7 +85,9 @@ class Product(models.Model):
     volume_m3 = models.DecimalField(default=0, decimal_places=6, max_digits=15)
     motor = models.CharField(max_length=100, default='', blank=True, null=True)
     stock = models.IntegerField(default=0)
+    stock_international = models.IntegerField(default=0)
     tariff_code = models.CharField(max_length=50, default='', blank=True, null=True)
+    provider = models.ForeignKey(Provider, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.part_number} - {self.name}"
@@ -78,14 +101,22 @@ class Compatibility(models.Model):
     def __str__(self):
         return f"{self.brand} {self.model} {self.serie}"
 
-# Customer Orders
-class Order(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    quantity = models.IntegerField(default=1)
-    address = models.CharField(max_length=100, default='', blank=True)
-    phone = models.CharField(max_length=20, default='')
-    date = models.DateField(default=datetime.datetime.today)
-    status = models.BooleanField(default=False)
+
+# Guest Users
+class GuestUser(models.Model):
+    full_name = models.CharField(max_length=100, blank=False)
+    date = models.DateTimeField(auto_now=True)
+    phone = models.CharField(max_length=20, blank=False)
+    email = models.EmailField(max_length=100, blank=False)
+    address1 = models.CharField(max_length=200, blank=False)
+    address2 = models.CharField(max_length=200, blank=True)
+    city = models.CharField(max_length=200, blank=False)
+    state = models.CharField(max_length=200, blank=True)
+    commune = models.CharField(max_length=200, blank=False)
+    zipcode = models.CharField(max_length=200, blank=True)
+    country = models.CharField(max_length=200, blank=False)
+
     def __str__(self):
-        return self.product
+        return self.full_name
+
+

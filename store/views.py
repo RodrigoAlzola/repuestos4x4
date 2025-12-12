@@ -12,11 +12,23 @@ from django import forms
 from django.db.models import Q
 import json
 from cart.cart import Cart
+from django.views.decorators.cache import never_cache
+from store.emails import send_registration_email
 
 # Create your views here.
 def home(request):
-    products = Product.objects.all()
-    return render(request, 'home.html', {'products': products})
+    # products = Product.objects.all()
+    batteries = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0), category__name__iexact='BATTERIES').order_by('?')[:4]
+    rear_axle = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0), category__name__iexact='REAR AXLE').order_by('?')[:4]
+    engine = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0), category__name__iexact='ENGINE').order_by('?')[:4]
+
+    header_image = 'media/marketing/IMG-20250815-WA0022.jpg'  # ruta relativa dentro de MEDIA
+    return render(request, 'home.html', {
+        'batteries': batteries,
+        'rear_axle': rear_axle,
+        'engine': engine,
+        'header_image': header_image,
+    })
 
 def about(request):
     return render(request, 'about.html', {})
@@ -53,21 +65,47 @@ def logout_user(request):
     messages.success(request, ('You have been logged out...'))
     return redirect('home')
 
+from store.emails import send_registration_email  # Ajusta según tu estructura de apps
+
 def register_user(request):
     form = SignUpForm()
-    if request.method ==  'POST':
+    if request.method == 'POST':
         form = SignUpForm(request.POST)
         if form.is_valid():
-            form.save()
+            email = form.cleaned_data['email']
+            
+            # Verificar si el email ya existe en User o Profile
+            if User.objects.filter(email=email).exists() or Profile.objects.filter(email=email).exists():
+                messages.error(request, 'Este correo electrónico ya está registrado. Por favor usa otro.')
+                return redirect('register')
+            
+            # Guardar el usuario
+            user = form.save()
+            
+            # Crear o actualizar el Profile con los datos del formulario
+            profile, created = Profile.objects.get_or_create(user=user)
+            profile.full_name = f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}"
+            profile.phone = form.cleaned_data['phone']
+            profile.email = email
+            profile.save()
+            
+            # Enviar email de bienvenida
+            try:
+                send_registration_email(email, profile.full_name)
+                messages.success(request, '¡Cuenta creada exitosamente! Hemos enviado un correo de confirmación.')
+            except Exception as e:
+                print(f"Error enviando email de bienvenida: {e}")
+                messages.success(request, 'Cuenta creada exitosamente! Por favor completa tu información de envío.')
+            
+            # Log in user
             username = form.cleaned_data['username']
             password = form.cleaned_data['password1']
-            # log in user
             user = authenticate(username=username, password=password)
             login(request, user)
-            messages.success(request, ('Username Created - Please fill your information.'))
+            
             return redirect('update_info')
         else:
-            messages.success(request, ('Whooops. There was an error, try again.'))
+            messages.error(request, 'Hubo un error en el registro. Por favor verifica los datos.')
             return redirect('register')
     else:
         return render(request, 'register.html', {'form': form})
@@ -114,21 +152,51 @@ def update_password(request):
     
 def update_info(request):
     if request.user.is_authenticated:
-        current_user = Profile.objects.get(user__id=request.user.id)
-        shipping_user = ShippingAddress.objects.get(user__id=request.user.id)
+        # Obtener o crear Profile y ShippingAddress
+        current_user, created = Profile.objects.get_or_create(user=request.user)
+        shipping_user, created = ShippingAddress.objects.get_or_create(user=request.user)
 
-        form = UserInfoForm(request.POST or None, instance=current_user)
-        shipping_form = ShippingForm(request.POST or None, instance=shipping_user)
-
-        if form.is_valid() or shipping_form.is_valid():
-            form.save()
-            shipping_form.save()
-            messages.success(request, "Your Info has been Updated.")
-            return redirect('home')
-        return render(request, 'update_info.html', {'form': form, 'shipping_form': shipping_form})
+        if request.method == 'POST':
+            form_type = request.POST.get('form_type')
+            
+            # Determinar qué formulario se envió
+            if form_type == 'personal':
+                # Solo procesar UserInfoForm
+                form = UserInfoForm(request.POST, instance=current_user)
+                if form.is_valid():
+                    form.save()
+                    messages.success(request, "Tu información personal ha sido actualizada correctamente.")
+                    return redirect('update_info')
+                else:
+                    messages.error(request, "Hubo un error en la información personal. Por favor verifica los datos.")
+                    shipping_form = ShippingForm(instance=shipping_user)
+                    
+            elif form_type == 'shipping':
+                # Solo procesar ShippingForm
+                shipping_form = ShippingForm(request.POST, instance=shipping_user)
+                if shipping_form.is_valid():
+                    shipping_form.save()
+                    messages.success(request, "Tu dirección de envío ha sido actualizada correctamente.")
+                    return redirect('update_info')
+                else:
+                    messages.error(request, "Hubo un error en la dirección de envío. Por favor verifica los datos.")
+                    form = UserInfoForm(instance=current_user)
+            else:
+                # Si no se especifica form_type, inicializar ambos
+                form = UserInfoForm(instance=current_user)
+                shipping_form = ShippingForm(instance=shipping_user)
+        else:
+            # GET request - mostrar formularios con datos actuales
+            form = UserInfoForm(instance=current_user)
+            shipping_form = ShippingForm(instance=shipping_user)
+        
+        return render(request, 'update_info.html', {
+            'form': form, 
+            'shipping_form': shipping_form
+        })
     else:
-        messages.success(request, "You must been Logged in to access the Update page.")
-        return redirect('home')
+        messages.error(request, "Debes iniciar sesión para acceder a esta página.")
+        return redirect('login')
     
 
 def product(request, pk):
@@ -147,10 +215,20 @@ def product(request, pk):
     selected_model = request.GET.get('model', '')
     selected_serie = request.GET.get('serie', '')
 
+    # Determinar rango de cantidad según tipo de stock
+    quantity_range = None
+    quantity_range_international = None
+    
+    if product.stock > 0:
+        quantity_range = range(1, min(product.stock + 1, 11))  # Máximo 10 o el stock disponible
+    elif product.stock_international > 0:
+        quantity_range_international = range(1, min(product.stock_international + 1, 11))
+
     return render(request, 'product.html', {
         'product': product,
         'compat_data': compat_data,
-        'quantity_range': range(1, product.stock + 1),
+        'quantity_range': quantity_range,
+        'quantity_range_international': quantity_range_international,
         'selected_brand': selected_brand,
         'selected_model': selected_model,
         'selected_serie': selected_serie,
@@ -168,7 +246,7 @@ def category(request, foo):
         messages.success(request, ("That  Category doesn't exist."))
         return redirect('home')
 
-
+@never_cache
 def all_products(request):
     # Filtros desde GET
     selected_category = request.GET.get('category')
@@ -177,7 +255,7 @@ def all_products(request):
     selected_serie = request.GET.get('serie')
     search_query = request.GET.get('search', '')
 
-    products = Product.objects.all()
+    products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
 
     # Aplicar búsqueda
     if search_query:
@@ -202,18 +280,37 @@ def all_products(request):
     products = products.distinct()
 
     # Paginación
-    paginator = Paginator(products, 30)
+    paginator = Paginator(products, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Datos para filtros
-    categories = Category.objects.all()
+    # Datos para filtros (únicos y ordenados) - VERSIÓN OPTIMIZADA
+    categories = Category.objects.all().order_by('name')
+    
+    # Construir compat_data con valores únicos y ordenados (más eficiente)
     compat_data = {}
-    for comp in Compatibility.objects.all():
-        brand = comp.brand.strip()
-        model = comp.model.strip()
-        serie = comp.serie.strip()
-        compat_data.setdefault(brand, {}).setdefault(model, []).append(serie)
+    
+    # Obtener combinaciones únicas de marca-modelo-serie ordenadas
+    unique_compatibilities = (
+        Compatibility.objects
+        .values('brand', 'model', 'serie')
+        .distinct()
+        .order_by('brand', 'model', 'serie')
+    )
+
+    for comp in unique_compatibilities:
+        brand = comp['brand'].strip()
+        model = comp['model'].strip()
+        serie = comp['serie'].strip()
+        
+        if brand not in compat_data:
+            compat_data[brand] = {}
+        
+        if model not in compat_data[brand]:
+            compat_data[brand][model] = []
+        
+        if serie not in compat_data[brand][model]:
+            compat_data[brand][model].append(serie)
 
     return render(request, 'all_products.html', {
         'page_obj': page_obj,

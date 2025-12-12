@@ -4,14 +4,37 @@ from .cart import Cart
 from store.models import Product
 from django.http import JsonResponse
 
-# Create your views here.
+
 def cart_summary(request):
-    # Get the cart
     cart = Cart(request)
     cart_products = cart.get_products()
     quantities = cart.get_quants()
+    international_status = cart.get_international_status()  # Nuevo
     total = cart.cart_total()
-    return render(request, "cart_summary.html", {"cart_products": cart_products, "quantities":quantities, "total": total})
+    
+    # Agregar rango de stock para cada producto
+    products_with_stock = []
+    for product in cart_products:
+        # Determinar rango según si es internacional
+        is_international = international_status.get(str(product.id), False)
+        
+        if is_international:
+            product.stock_range = range(1, product.stock_international + 1)
+            product.is_international_item = True
+        else:
+            product.stock_range = range(1, product.stock + 1)
+            product.is_international_item = False
+            
+        products_with_stock.append(product)
+    
+    return render(request, "cart_summary.html", {
+        "cart_products": products_with_stock, 
+        "quantities": quantities,
+        "international_status": international_status,
+        "has_international": cart.has_international_items(),
+        "total": total
+    })
+
 
 def cart_add(request):
     # Get the cart

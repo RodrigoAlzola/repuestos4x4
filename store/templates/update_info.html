@@ -2,43 +2,77 @@
 
 {% block content %}
 
-        <!-- Header-->
-        <header class="bg-dark py-5">
-            <div class="container px-4 px-lg-5 my-5">
-                <div class="text-center text-white">
-                    <h1 class="display-4 fw-bolder">Update Info</h1>
-                    <p class="lead fw-normal text-white-50 mb-0">Update User Info</p>
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Mi Información</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Actualiza tu información personal y de envío</p>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <br/><br/>
+    
+    <div class="row">
+        <!-- Información Personal - Lado Izquierdo -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Información Personal</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'update_info' %}" id="personalInfoForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="personal">
+                        
+                        {{ form.as_p }}
+                        
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save me-2"></i>Guardar Información Personal
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </header>
+        </div>
 
-        <div class="container">
-            <div class="row">
-                    <div class="col-md-6 offset-md-3">
-                        <br/><br/>
-            
-            <br/><br/>  
-<form method="POST" action="{% url 'update_info' %}">
-    {% csrf_token %}
-
-    <strong>Billing Infromation</strong>
+        <!-- Dirección de Envío - Lado Derecho -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>Dirección de Envío</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'update_info' %}" id="shippingInfoForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="shipping">
+                        
+                        {{ shipping_form.as_p }}
+                        
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-save me-2"></i>Guardar Dirección de Envío
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <br/><br/>
-    {{ form.as_p}}
+    
+    <!-- Botón para volver -->
+    <div class="text-center">
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Volver al Inicio
+        </a>
+    </div>
+    
     <br/><br/>
-
-    <strong>Shipping Adress</strong>
-    <br/><br/>
-    {{ shipping_form.as_p }}
-
-    <br/><br/>
-    <button type="submit" class="btn btn-secondary">
-        Update Profile
-    </button>
-</form>
-<br/><br/>
-
-
-</div>
 </div>
 
 {% endblock %}

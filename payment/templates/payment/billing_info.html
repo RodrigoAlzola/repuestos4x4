@@ -1,101 +1,261 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block content %}
-        <!-- Header-->
-        <header class="bg-dark py-5">
-            <div class="container px-4 px-lg-5 my-5">
-                <div class="text-center text-white">
-                    <h1 class="display-4 fw-bolder">Billing Info</h1>
-                    <p class="lead fw-normal text-white-50 mb-0">Enter your payment information</p>
-                </div>
-            </div>
-        </header>
-        <br/>
-<div class="container">
-            <div class="row">
-                    <div class="col-md-6 offset-md-3">
-
-                        <div class="card">
-                            <div class="card-header">
-                                Order Summary
-                            </div>
-                            <div class="card-body">
-                                {% for product in cart_products %}
-                                    {{ product.name }}
-
-                                    {% if product.is_sale %}
-                                        <!-- Product price-->
-                                        
-                                        $ {{ product.price }}
-                                       
-                                        &nbsp
-                                        $ {{ product.sale_price }}
-                                    {% else %}
-                                        $ {{ product.price }}
-                                    {% endif %}
-                                <br/>
-                                <small>Quantity:</small>
-                                {% for key, value in quantities.items %}
-                    {% if key == product.id|slugify %}
-                        {{ value }}
-                    {% endif %}
-                {% endfor %}
-                
-                <br/><br/>
-
-
-
-                                {% endfor %}
-                                <strong>Total:   ${{ total }}</strong>
-                                <br/><br/>
-                                <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
-                            </div>
-                            </div>
-
-<br/><br/>
-
-<div class="card">
-  <div class="card-header">
-    Shipping Info
+<!-- Header -->
+<header class="bg-dark py-5">
+  <div class="container px-4 px-lg-5 my-5">
+    <div class="text-center text-white">
+      <h1 class="display-4 fw-bolder">Billing Info</h1>
+      <p class="lead fw-normal text-white-50 mb-0">Enter your payment information</p>
+    </div>
   </div>
-  <div class="card-body">
-    
-    Name: {{ shipping_info.shipping_full_name }}<br/>
-    Email: {{ shipping_info.shipping_email }}<br/>
-    Phone: {{ shipping_info.shipping_phone }}<br/>
-    Address1: {{ shipping_info.shipping_address1 }}<br/>
-    Address2: {{ shipping_info.shipping_address2 }}<br/>
-    City: {{ shipping_info.shipping_city }}<br/>
-    State: {{ shipping_info.shipping_state }}<br/>
-    Commune: {{ shipping_info.shipping_commune }}<br/>
-    Zipcode: {{ shipping_info.shipping_zipcode }}<br/>
-    Country: {{ shipping_info.shipping_country }}<br/>
-    <br/>
-    <a href="{% url 'checkout' %}" class="btn btn-outline-secondary">Uppdate Shipping</a>
-  </div>
-</div>
-<br/><br/>
-
-<div class="card">
-  <div class="card-header">
-    Billing Info
-  </div>
-  <div class="card-body">
-    <form method="POST" action="{% url 'process_order' %}">
-      {% csrf_token %}
-    {{ billing_form.as_p }}
-
-  </div>
-</div>
+</header>
 <br/>
-<button type="submit" href="#" class="btn btn-secondary">Pay Now</button>
-</form>
 
-                    </div>
-            </div>
+<div class="container-fluid px-3">
+  <div class="row justify-content-between">
+    <!-- Billing Info Section -->
+    <div class="col-lg-6 mx-auto">
+    <form method="POST" action="{% url 'process_payment' %}" id="paymentForm">
+  {% csrf_token %}
+
+  <!-- Personal Info -->
+  <div class="card mb-4">
+    <div class="card-header">Personal Info</div>
+    <div class="card-body">
+      <div class="mb-1"><strong>Nombre:</strong> {{ personal_info.full_name }}</div>
+      <div class="mb-1"><strong>Teléfono:</strong> {{ personal_info.phone }}</div>
+      <div class="mb-1"><strong>Email:</strong> {{ personal_info.email }}</div>
+    </div>
+  </div>
+
+  <!-- Shipping Address -->
+  <div class="card mb-4">
+    <div class="card-header">Shipping Address</div>
+    <div class="card-body">
+      <div class="mb-1"><strong>Nombre:</strong> {{ shipping_info.shipping_full_name }}</div>
+      <div class="mb-1"><strong>Dirección:</strong> {{ shipping_info.shipping_address1 }}</div>
+      <div class="mb-1"><strong>Ciudad:</strong> {{ shipping_info.shipping_city }}</div>
+      <div class="mb-1"><strong>Estado:</strong> {{ shipping_info.shipping_state }}</div>
+      <div class="mb-1"><strong>Comuna:</strong> {{ shipping_info.shipping_commune }}</div>
+      <div class="mb-1"><strong>Código Postal:</strong> {{ shipping_info.shipping_zipcode }}</div>
+      <div class="mb-1"><strong>Pais:</strong> {{ shipping_info.shipping_country }}</div>
+    </div>
+  </div>
+
+  <!-- Método de Pago -->
+  <div class="card mb-4">
+    <div class="card-header">Selecciona tu método de pago</div>
+    <div class="card-body">
+      <div class="row">
+        <!-- WebPay -->
+        <div class="col-md-6 mb-3">
+          <input type="radio" class="btn-check" name="payment_method" id="webpay" value="webpay" checked required>
+          <label class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-3" for="webpay">
+            {% load static %}
+            <img src="{% static 'images/webpay-logo.png' %}" alt="WebPay" style="height: 50px; margin-bottom: 10px;">
+            <span>WebPay Plus</span> 
+            <small class="text-muted">Tarjetas de crédito y débito</small>
+          </label>
+        </div>
+
+        <!-- Placeholder para futuros métodos de pago -->
+        <div class="col-md-6 mb-3">
+          <input type="radio" class="btn-check" name="payment_method" id="transferencia" value="transferencia" disabled>
+          <label class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3" for="transferencia" style="opacity: 0.5;">
+            <i class="bi bi-bank" style="font-size: 50px; margin-bottom: 10px;"></i>
+            <span>Transferencia Bancaria</span>
+            <small class="text-muted">Próximamente</small>
+          </label>
+        </div>
+      </div>
+
+      <!-- Información del método seleccionado -->
+      <div id="payment-info" class="alert alert-info mt-3">
+        <strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.
+      </div>
+    </div>
+  </div>
+
+  <!-- Términos y Condiciones -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="termsCheckbox" required>
+        <label class="form-check-label" for="termsCheckbox">
+          Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" onclick="event.preventDefault();">Términos y Condiciones</a>
+        </label>
+      </div>
+      <input type="hidden" name="terms_accepted" id="termsAcceptedInput" value="">
+    </div>
+  </div>
+
+  <br/>
+  <div class="d-flex justify-content-end">
+    <button type="submit" id="payButton" class="btn btn-danger" disabled>Pay Now</button>
+  </div>
+</form>
+    </div>
+
+    <!-- Order summary -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">Order Summary</div>
+        <div class="card-body">
+          {% for product in cart_products %}
+            <strong>{{ product.name }}</strong><br>
+            {% if product.is_sale %}
+              <strike>$ {{ product.price|currency_format }}</strike> &nbsp $ {{ product.sale_price|currency_format }}
+            {% else %}
+              $ {{ product.price|currency_format }}
+            {% endif %}
+            <br>
+            <small>Quantity:</small>
+            {% for key, value in quantities.items %}
+              {% if key == product.id|slugify %}
+                {{ value }}
+              {% endif %}
+            {% endfor %}
+            <br><br>
+          {% endfor %}
+          <strong>Total: ${{ total|currency_format }}</strong>
+          <br><br>
+          <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- Modal de Términos y Condiciones -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="termsModalLabel">Términos y Condiciones</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6>1. Aceptación de los términos</h6>
+        <p>Al utilizar nuestro sitio web y realizar una compra, usted acepta estar sujeto a estos Términos y Condiciones de venta. Si no está de acuerdo con estos términos, por favor no realice compras en nuestro sitio.</p>
+        
+        <h6>2. Productos y disponibilidad</h6>
+        <p>Todos los repuestos de autos ofrecidos en nuestro sitio web están sujetos a disponibilidad. Nos reservamos el derecho de limitar las cantidades de cualquier producto que ofrecemos. Todas las descripciones de productos, imágenes, referencias y precios están sujetos a cambios sin previo aviso.</p>
+        
+        <h6>3. Precios y formas de pago</h6>
+        <p>Todos los precios están expresados en pesos chilenos (CLP) e incluyen IVA. Nos reservamos el derecho de modificar nuestros precios en cualquier momento. Aceptamos las siguientes formas de pago: tarjetas de crédito, débito y transferencias bancarias.</p>
+        
+        <h6>4. Política de envío</h6>
+        <p>Los tiempos de entrega estimados comienzan a contar desde la confirmación del pago. Los plazos pueden variar según la disponibilidad del producto y la ubicación de entrega. No nos hacemos responsables por retrasos ocasionados por servicios de mensajería externos.</p>
+        
+        <h6>5. Política de devoluciones y cambios</h6>
+        <p>Aceptamos devoluciones dentro de los 30 días posteriores a la recepción del producto, siempre y cuando el artículo esté en su empaque original, sin uso y en perfectas condiciones. Los gastos de envío por devoluciones corren por cuenta del cliente, excepto en casos de productos defectuosos o errores en el envío.</p>
+        
+        <h6>6. Garantía</h6>
+        <p>Todos nuestros productos cuentan con garantía del fabricante. La duración y cobertura de la garantía varía según el producto. Para hacer válida la garantía, debe presentar la factura de compra y el producto no debe haber sido manipulado o instalado incorrectamente.</p>
+        
+        <h6>7. Limitación de responsabilidad</h6>
+        <p>No seremos responsables por daños indirectos, incidentales, especiales o consecuentes que resulten del uso o la imposibilidad de usar nuestros productos. Nuestra responsabilidad total no excederá el precio pagado por el producto.</p>
+        
+        <h6>8. Privacidad y protección de datos</h6>
+        <p>Nos comprometemos a proteger su información personal de acuerdo con las leyes de protección de datos vigentes en Chile. Sus datos serán utilizados únicamente para procesar su pedido y mejorar nuestros servicios.</p>
+        
+        <h6>9. Modificaciones a los términos</h6>
+        <p>Nos reservamos el derecho de modificar estos Términos y Condiciones en cualquier momento. Las modificaciones entrarán en vigor inmediatamente después de su publicación en el sitio web.</p>
+        
+        <h6>10. Ley aplicable y jurisdicción</h6>
+        <p>Estos Términos y Condiciones se rigen por las leyes de la República de Chile. Cualquier disputa será resuelta en los tribunales competentes de Santiago, Chile.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="acceptTermsBtn">Aceptar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- JavaScript para habilitar/deshabilitar el botón -->
+<script>
+  const termsCheckbox = document.getElementById('termsCheckbox');
+  const payButton = document.getElementById('payButton');
+  const termsAcceptedInput = document.getElementById('termsAcceptedInput');
+  const acceptTermsBtn = document.getElementById('acceptTermsBtn');
+  const paymentForm = document.getElementById('paymentForm');
+
+  // Habilitar/deshabilitar botón según checkbox
+  termsCheckbox.addEventListener('change', function() {
+    payButton.disabled = !this.checked;
+    termsAcceptedInput.value = this.checked ? 'true' : '';
+  });
+
+  // Aceptar desde el modal
+  acceptTermsBtn.addEventListener('click', function() {
+    termsCheckbox.checked = true;
+    payButton.disabled = false;
+    termsAcceptedInput.value = 'true';
+  });
+
+  // Validar antes de enviar el formulario
+  paymentForm.addEventListener('submit', function(e) {
+    if (!termsCheckbox.checked) {
+      e.preventDefault();
+      alert('Debes aceptar los Términos y Condiciones para continuar.');
+    }
+  });
+
+  // Mostrar información según el método de pago seleccionado
+  const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+  const paymentInfo = document.getElementById('payment-info');
+
+  paymentMethods.forEach(method => {
+    method.addEventListener('change', function() {
+      if (this.value === 'webpay') {
+        paymentInfo.innerHTML = '<strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.';
+        paymentInfo.className = 'alert alert-info mt-3';
+      } else if (this.value === 'transferencia') {
+        paymentInfo.innerHTML = '<strong>Transferencia Bancaria:</strong>Recibirás un email con los datos bancarios para realizar la transferencia.';
+        paymentInfo.className = 'alert alert-warning mt-3';
+      }
+      // Aquí puedes agregar más métodos en el futuro
+    });
+  });
+
+</script>
+
+<style>
+  /* Solo para los labels de método de pago */
+  label.btn-outline-primary[for="webpay"],
+  label.btn-outline-primary[for="transferencia"] {
+    background-color: transparent;
+    color: #212529;
+    border-color: #dee2e6;
+    border-width: 2px;
+  }
+
+  /* Hover - sin azul */
+  label.btn-outline-primary[for="webpay"]:hover,
+  label.btn-outline-primary[for="transferencia"]:hover {
+    background-color: #f8f9fa;
+    color: #212529;
+    border-color: #dee2e6;
+  }
+
+  /* Cuando está seleccionado: solo borde rojo */
+  .btn-check:checked + label.btn-outline-primary[for="webpay"],
+  .btn-check:checked + label.btn-outline-primary[for="transferencia"] {
+    background-color: transparent !important;
+    color: #212529 !important;
+    border-color: #dc3545 !important;
+    border-width: 3px !important;
+  }
+
+  /* Focus - sin azul */
+  label.btn-outline-primary[for="webpay"]:focus,
+  label.btn-outline-primary[for="transferencia"]:focus {
+    box-shadow: none;
+  }
+</style>
 
 <br/><br/>
 {% endblock %}

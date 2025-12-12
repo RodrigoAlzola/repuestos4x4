@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
+
 {% block content %}
 
 <div class="container">
@@ -14,27 +16,49 @@
           <p class="card-text">{{ product.description }}</p>
 
           <ul class="list-group list-group-flush">
-           <!-- <li class="list-group-item"><strong>Part Number:</strong> {{ product.part_number }}</li>-->
             {% if product.motor %}
               <li class="list-group-item"><strong>Motor:</strong> {{ product.motor }}</li>
             {% endif %}
             <li class="list-group-item"><strong>Weight (kg):</strong> {{ product.weight_kg }}</li>
             <li class="list-group-item"><strong>Dimensions (cm):</strong> {{ product.length_cm }} x {{ product.width_cm }} x {{ product.height_cm }}</li>
             <li class="list-group-item"><strong>Volume (m³):</strong> {{ product.volume_m3 }}</li>
-            <li class="list-group-item"><strong>Stock:</strong> {{ product.stock }}</li>
+            
+            <!-- Stock con indicador de tipo -->
+            {% if product.stock > 0 %}
+              <li class="list-group-item">
+                <strong>Stock:</strong> 
+                <span class="badge bg-success">{{ product.stock }} disponibles</span>
+              <!--  <small class="text-muted ms-2">Entrega inmediata</small> -->
+              </li>
+            {% elif product.stock_international > 0 %}
+              <li class="list-group-item">
+                <strong>Stock:</strong> 
+                <span class="badge bg-info">{{ product.stock_international }} disponibles</span>
+                <span class="badge bg-warning text-dark ms-2">
+                  <i class="bi bi-globe"></i> Compra Internacional
+                </span>
+                <br>
+                <small class="text-muted">Tiempo de entrega: 15-30 días hábiles</small>
+              </li>
+            {% else %}
+              <li class="list-group-item">
+                <strong>Stock:</strong> 
+                <span class="badge bg-danger">Sin stock disponible</span>
+              </li>
+            {% endif %}
           </ul>
 
       
           <div class="text-end">
-  {% if product.is_sale %}
-    <p class="fs-4 text-danger">
-      <strike class="text-muted">$ {{ product.price }}</strike><br/>
-      <strong>$ Precio: {{ product.sale_price }}</strong>
-    </p>
-  {% else %}
-    <p class="fs-4 text-dark"><strong>$ Precio: {{ product.price }}</strong></p>
-  {% endif %}
-</div>
+            {% if product.is_sale %}
+              <p class="fs-4 text-danger">
+                <strike class="text-muted">$ {{ product.price|currency_format }}</strike><br/>
+                <strong>$ Precio: {{ product.sale_price|currency_format }}</strong>
+              </p>
+            {% else %}
+              <p class="fs-4 text-dark"><strong>$ Precio: {{ product.price|currency_format }}</strong></p>
+            {% endif %}
+          </div>
 
           <br/>
           <!-- Compatibilidad seleccionada -->
@@ -42,7 +66,7 @@
           <div class="row mb-3">
             <div class="col-md-4">
               <label for="brand-select">Marca:</label>
-              <select id="brand-select" class="form-select" disabled>
+              <select id="brand-select" class="form-select">
                 <option value="">-- Selecciona una marca --</option>
               </select>
             </div>
@@ -59,30 +83,51 @@
               </select>
             </div>
           </div>
-<br/>
-<!-- Cantidad -->
-<div class="row justify-content-end">
-  <div class="col-md-4 text-end">
-    <label for="quantity-cart" class="form-label fw-bold">Cantidad:</label>
-    {% if product.stock > 0 %}
-      <select class="form-select form-select-sm w-auto d-inline-block" id="quantity-cart">
-        {% for i in quantity_range %}
-          <option value="{{ i }}">{{ i }}</option>
-        {% endfor %}
-      </select>
-    {% else %}
-      <p class="text-danger">Producto sin stock disponible.</p>
-    {% endif %}
-  </div>
-</div>
+          <br/>
 
+          <!-- Cantidad -->
+          <div class="row justify-content-end">
+            <div class="col-md-6 text-end">
+              {% if product.stock > 0 or product.stock_international > 0 %}
+                <label for="quantity-cart" class="form-label fw-bold">Cantidad:</label>
+                <select class="form-select form-select-sm w-auto d-inline-block" id="quantity-cart">
+                  {% if product.stock > 0 %}
+                    {% for i in quantity_range %}
+                      <option value="{{ i }}">{{ i }}</option>
+                    {% endfor %}
+                  {% else %}
+                    {% for i in quantity_range_international %}
+                      <option value="{{ i }}">{{ i }}</option>
+                    {% endfor %}
+                  {% endif %}
+                </select>
+                
+                <!--{% if product.stock <= 0 and product.stock_international > 0 %}
+                  <div class="alert alert-info mt-2 mb-0" role="alert">
+                    <small>
+                      <i class="bi bi-info-circle me-1"></i>
+                      <strong>Compra Internacional:</strong> Tiempo estimado de entrega: 15-30 días hábiles.
+                    </small>
+                  </div>
+                {% endif %}
+              {% else %}
+                <p class="text-danger fw-bold">Producto sin stock disponible.</p>
+              {% endif %}-->
+            </div>
+          </div>
 
-    
+          <br/>
           <div class="text-end">
-  <button type="button" value="{{ product.id }}" class="btn btn-danger" id="add-cart">
-    Add To Cart
-  </button>
-</div>
+            {% if product.stock > 0 or product.stock_international > 0 %}
+              <button type="button" value="{{ product.id }}" class="btn btn-danger btn-lg" id="add-cart">
+                <i class="bi bi-cart-plus me-2"></i>Agregar al Carrito
+              </button>
+            {% else %}
+              <button type="button" class="btn btn-secondary btn-lg" disabled>
+                <i class="bi bi-x-circle me-2"></i>Sin Stock
+              </button>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -126,6 +171,61 @@
       if (serie === selectedSerie) option.selected = true;
       serieSelect.appendChild(option);
     });
+  }
+
+  // Event listener para cambios en marca
+  brandSelect.addEventListener('change', function() {
+    const brand = this.value;
+    
+    modelSelect.innerHTML = '<option value="">-- Selecciona un modelo --</option>';
+    modelSelect.disabled = true;
+    serieSelect.innerHTML = '<option value="">-- Selecciona una serie --</option>';
+    serieSelect.disabled = true;
+    
+    if (brand && compatData[brand]) {
+      modelSelect.disabled = false;
+      for (const model in compatData[brand]) {
+        modelSelect.appendChild(new Option(model, model));
+      }
+      updateURL(brand, '', '');
+    } else {
+      updateURL('', '', '');
+    }
+  });
+
+  // Event listener para cambios en modelo
+  modelSelect.addEventListener('change', function() {
+    const brand = brandSelect.value;
+    const model = this.value;
+    
+    serieSelect.innerHTML = '<option value="">-- Selecciona una serie --</option>';
+    serieSelect.disabled = true;
+    
+    if (brand && model && compatData[brand][model]) {
+      serieSelect.disabled = false;
+      compatData[brand][model].forEach(serie => {
+        serieSelect.appendChild(new Option(serie, serie));
+      });
+      updateURL(brand, model, '');
+    }
+  });
+
+  // Event listener para cambios en serie
+  serieSelect.addEventListener('change', function() {
+    const brand = brandSelect.value;
+    const model = modelSelect.value;
+    const serie = this.value;
+    updateURL(brand, model, serie);
+  });
+
+  // Función para actualizar la URL y recargar la página
+  function updateURL(brand, model, serie) {
+    const params = new URLSearchParams();
+    if (brand) params.append('brand', brand);
+    if (model) params.append('model', model);
+    if (serie) params.append('serie', serie);
+    const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.location.href = newURL;
   }
 </script>
 

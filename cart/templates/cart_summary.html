@@ -1,139 +1,201 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block content %}
-        <!-- Header-->
-        <header class="bg-dark py-5">
-            <div class="container px-4 px-lg-5 my-5">
-                <div class="text-center text-white">
-                    <h1 class="display-4 fw-bolder">Shoping Cart</h1>
-                    <p class="lead fw-normal text-white-50 mb-0">View your Products</p>
-                </div>
-            </div>
-        </header>
-        <br/>
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Carrito de Compras</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Revisa tus productos</p>
+        </div>
+    </div>
+</header>
+<br/>
+
 <div class="container">
     {% if cart_products %}
+    
+        <!-- Alert si hay productos internacionales -->
+        {% if has_international %}
+        <div class="alert alert-info mb-4" role="alert">
+            <h5 class="alert-heading">
+                <i class="bi bi-globe me-2"></i>Tu carrito incluye productos internacionales
+            </h5>
+            <p class="mb-0">
+                Algunos productos serán importados especialmente para ti. 
+                Tiempo estimado de entrega: <strong>15-30 días hábiles</strong>.
+            </p>
+        </div>
+        {% endif %}
+
         {% for product in cart_products %}
-            <div class="card mb-3">
-    <div class="row g-0">
-        <div class="col-md-4">
-        <img src="{{ product.image }}" class="img-fluid rounded-start" alt="...">
-        </div>
-        <div class="col-md-8">
-        <div class="card-body">
-                
-            <br/><br/>
-            <h5 class="card-title">{{ product.name }}</h5>
-            <p class="card-text">{{ product.description }}</p>
-    <br/>
-            {% if product.is_sale %}
-                    <!-- Product price-->
-                                        <strike>
-                                        $ {{ product.price }}
-                                        </strike>
-                                        &nbsp
-                                        $ {{ product.sale_price }}
-                {% else %}
-                    $ {{ product.price }}
-                {% endif %}
-                 <br/><br/>
-            <div class="row justify-content-center">
-              <div class="col-md-2"> Quantity:</div>
-              <div class="col-md-2">
-            <select class="form-select form-select-sm" id="select{{product.id}}">
-            
-                {% for key, value in quantities.items %}
-                    {% if key == product.id|slugify %}
-                        <option selected>{{ value }}</option>
-                    {% endif %}
-                {% endfor %}
-            
-  <option value="1">1</option>
-  <option value="2">2</option>
-  <option value="3">3</option>
-  <option value="4">4</option>
-  <option value="5">5</option>
-</select>
-</div>
+        <div class="card mb-3 {% if product.is_international_item %}border-info{% endif %}">
+            <div class="row g-0">
+                <div class="col-md-4">
+                    <img src="{{ product.image }}" class="img-fluid rounded-start" alt="{{ product.name }}">
+                </div>
+                <div class="col-md-8">
+                    <div class="card-body">
+                        
+                        <!-- Badge de producto internacional -->
+                        {% if product.is_international_item %}
+                        <span class="badge bg-info float-end">
+                            <i class="bi bi-globe"></i> Internacional
+                        </span>
+                        {% endif %}
+                        
+                        <br/>
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">{{ product.description }}</p>
+                        <br/>
+                        
+                        <!-- Precio -->
+                        {% if product.is_sale %}
+                        <strike>$ {{ product.price|currency_format }}</strike>
+                        &nbsp;
+                        <span class="text-danger fw-bold">$ {{ product.sale_price|currency_format }}</span>
+                        {% else %}
+                        <span class="fw-bold">$ {{ product.price|currency_format }}</span>
+                        {% endif %}
+                        
+                        <br/><br/>
+                        
+                        <!-- Stock info -->
+                        {% if product.is_international_item %}
+                        <div class="alert alert-warning py-2 mb-3">
+                            <small>
+                                <i class="bi bi-clock me-1"></i>
+                                <strong>Compra Internacional:</strong> Stock disponible: {{ product.stock_international }}
+                            </small>
+                        </div>
+                        {% else %}
+                        <small class="text-muted">
+                            <i class="bi bi-check-circle text-success me-1"></i>
+                            Stock local: {{ product.stock }} disponibles
+                        </small>
+                        <br/><br/>
+                        {% endif %}
+                        
+                        <!-- Cantidad -->
+                        <div class="row justify-content-center align-items-center">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0">Cantidad:</label>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm" id="select{{product.id}}">
+                                    {% for i in product.stock_range %}
+                                    <option value="{{ i }}" 
+                                    {% for key, value in quantities.items %}
+                                        {% if key == product.id|slugify and value == i %}selected{% endif %}
+                                    {% endfor %}
+                                    >{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <button type="button" data-index="{{product.id}}" class="btn btn-sm btn-secondary update-cart">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+                                </button>
+                                <button type="button" data-index="{{product.id}}" class="btn btn-sm btn-danger delete-product">
+                                    <i class="bi bi-trash me-1"></i>Eliminar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <br/>
+                    </div>
+                </div>
             </div>
-<button type="button" data-index="{{product.id}}" class="btn btn-secondary update-cart">Update</button>
-<button type="button" data-index="{{product.id}}" class="btn btn-danger delete-product">Remove</button>
-<br/><br/>
         </div>
-        </div>
-    </div>
-    </div><br/><br/>
         {% endfor %}
-    <div align="right">
-    <h3> Total: ${{ total }}</h3>
-    <!--a href="{% url 'checkout' %}" class="btn btn-success">Checkout</a-->
-    <a href="{% url 'workshop' %}" class="btn btn-success">Continue</a>
-    </div>
+        
+        <!-- Total y botones -->
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h3 class="mb-0">Total: <span class="text-success">${{ total|currency_format }}</span></h3>
+                        {% if has_international %}
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Incluye productos con importación internacional
+                        </small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <a href="{% url 'all_products' %}" class="btn btn-outline-secondary me-2">
+                            <i class="bi bi-arrow-left me-1"></i>Seguir Comprando
+                        </a>
+                        <a href="{% url 'checkout' %}" class="btn btn-success btn-lg">
+                            <i class="bi bi-arrow-right me-1"></i>Continuar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
     {% else %}
-    There's nothing in your Cart.
+        <!-- Carrito vacío -->
+        <div class="text-center py-5">
+            <i class="bi bi-cart-x" style="font-size: 4rem; color: #ccc;"></i>
+            <h3 class="mt-3">Tu carrito está vacío</h3>
+            <p class="text-muted">Agrega productos para comenzar tu compra</p>
+            <a href="{% url 'all_products' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-shop me-2"></i>Ir a la Tienda
+            </a>
+        </div>
     {% endif %}
     
     <br/><br/>
 </div>
 
-
 <script>
-    // Update Cart
-    $(document).on('click', '.update-cart', function(e){
-  e.preventDefault();
-  // grab the product id
-  var productid = $(this).data('index')
+// Update Cart
+$(document).on('click', '.update-cart', function(e){
+    e.preventDefault();
+    var productid = $(this).data('index');
 
-  $.ajax({
-    type: 'POST',
-    url: "{% url 'cart_update' %}",
-    data: {
-      product_id: $(this).data('index'),
-      product_quantity: $('#select' + productid + ' option:selected').text(),
-      csrfmiddlewaretoken: '{{ csrf_token }}',
-      action: 'post'
-    },
-
-    success: function(json){
-      //console.log(json)
-      //document.getElementById("cart_quantity").textContent = json.quantity
-      location.reload();
-    },
-
-    error: function(xhr, errmsg, err){
-
-    }
-
-  });
-})
+    $.ajax({
+        type: 'POST',
+        url: "{% url 'cart_update' %}",
+        data: {
+            product_id: productid,
+            product_quantity: $('#select' + productid + ' option:selected').val(),
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            action: 'post'
+        },
+        success: function(json){
+            location.reload();
+        },
+        error: function(xhr, errmsg, err){
+            alert('Error al actualizar el carrito');
+        }
+    });
+});
 
 // Remove item
-    $(document).on('click', '.delete-product', function(e){
-  e.preventDefault();
-  // grab the product id
-  // var productid = $(this).data('index')
-
-  $.ajax({
-    type: 'POST',
-    url: "{% url 'cart_delete' %}",
-    data: {
-      product_id: $(this).data('index'),
-      csrfmiddlewaretoken: '{{ csrf_token }}',
-      action: 'post'
-    },
-
-    success: function(json){
-      //console.log(json)
-      //document.getElementById("cart_quantity").textContent = json.quantity
-      location.reload();
-    },
-
-    error: function(xhr, errmsg, err){
-
+$(document).on('click', '.delete-product', function(e){
+    e.preventDefault();
+    
+    if(confirm('¿Estás seguro de eliminar este producto?')){
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'cart_delete' %}",
+            data: {
+                product_id: $(this).data('index'),
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                action: 'post'
+            },
+            success: function(json){
+                location.reload();
+            },
+            error: function(xhr, errmsg, err){
+                alert('Error al eliminar el producto');
+            }
+        });
     }
-
-  });
-})
+});
 </script>
 
 <br/><br/>
