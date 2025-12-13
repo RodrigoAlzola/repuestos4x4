@@ -61,6 +61,25 @@ class Command(BaseCommand):
         default_image = "https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"
         df['Foto'] = df['Foto'].replace("", default_image)
 
+        # 4. FILTRAR productos sin stock (NUEVO)
+        total_inicial = len(df)
+        
+        # Convertir a numérico y llenar NaN con 0
+        df['BR SOH'] = pd.to_numeric(df['BR SOH'], errors='coerce').fillna(0)
+        df['MELSOH'] = pd.to_numeric(df['MELSOH'], errors='coerce').fillna(0)
+        
+        # Filtrar: mantener solo productos con stock local O internacional > 0
+        df = df[(df['BR SOH'] > 0) | (df['MELSOH'] > 0)]
+        
+        productos_filtrados = total_inicial - len(df)
+        
+        self.stdout.write(self.style.WARNING(
+            f'Productos sin stock filtrados: {productos_filtrados} de {total_inicial}'
+        ))
+        self.stdout.write(self.style.SUCCESS(
+            f'Productos a procesar: {len(df)}'
+        ))
+
         creados = 0
         actualizados = 0
         compatibles = 0
@@ -70,10 +89,9 @@ class Command(BaseCommand):
         # Cache para imágenes ya verificadas (optimización)
         verified_images = {}
         
-        # total_rows = len(df)
-        total_rows = 800
+        total_rows = len(df)
 
-        for index, row in df.head(total_rows).iterrows():
+        for index, row in df.head(700).iterrows():
             try:
                 # Progress indicator cada 50 filas
                 if index % 50 == 0:
@@ -191,6 +209,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f'\n=== RESUMEN ===\n'
+            f'Productos sin stock filtrados: {productos_filtrados}\n'
             f'Productos nuevos creados: {creados}\n'
             f'Productos actualizados: {actualizados}\n'
             f'Compatibilidades nuevas: {compatibles}\n'
