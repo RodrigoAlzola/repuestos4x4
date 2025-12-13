@@ -277,7 +277,7 @@ def all_products(request):
     if selected_serie:
         products = products.filter(compatibilities__serie=selected_serie)
 
-    products = products.distinct()
+    products = products.distinct().order_by('name')
 
     # Paginación
     paginator = Paginator(products, 15)
