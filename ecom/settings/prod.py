@@ -1,4 +1,6 @@
 from .base import *
+import dj_database_url
+import os
 
 DEBUG = True
 
@@ -20,15 +22,14 @@ CSRF_TRUSTED_ORIGINS = [
     'https://repuestos4x4-production.up.railway.app',
 ]
 
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': os.environ['DB_PASSWORD_YO'],
-        'HOST': 'ballast.proxy.rlwy.net',
-        'PORT': '45961',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=True,  # Agregar esto
+    )
 }
 
 TRANSBANK_COMMERCE_CODE = os.environ.get('PROD_TRANSBANK_COMMERCE_CODE')
