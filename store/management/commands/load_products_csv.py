@@ -3,6 +3,8 @@ import pandas as pd
 from store.models import Category, Product, Compatibility, Provider
 import math
 import requests
+import time  # ← AGREGAR ESTO
+from datetime import timedelta  # ← AGREGAR ESTO
 
 
 def convertion(value):
@@ -37,9 +39,21 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
+        # ============ INICIAR TIMER ============
+        start_time = time.time()
+        self.stdout.write(self.style.WARNING(f'⏱️  Iniciando carga de productos...'))
+        # =======================================
 
-        # Asigna el primer proveedor, Terraintamers: 1
-        provider = Provider.objects.get(id=1)
+        # Obtener o crear el proveedor Terraintamers
+        provider, created = Provider.objects.get_or_create(
+            id=1,
+            defaults={
+                'name': 'Terraintamer',
+            }
+        )
+        
+        if created:
+            self.stdout.write(self.style.SUCCESS(f'✅ Provider "{provider.name}" creado'))
 
         csv_path = kwargs['csv_path']
         skip_image_check = kwargs.get('skip_image_check', False)
@@ -61,7 +75,7 @@ class Command(BaseCommand):
         default_image = "https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"
         df['Foto'] = df['Foto'].replace("", default_image)
 
-        # 4. FILTRAR productos sin stock (NUEVO)
+        # 4. FILTRAR productos sin stock
         total_inicial = len(df)
         
         # Convertir a numérico y llenar NaN con 0
@@ -91,11 +105,12 @@ class Command(BaseCommand):
         
         total_rows = len(df)
 
-        for index, row in df.head(700).iterrows():
+        for index, row in df.iterrows():
             try:
                 # Progress indicator cada 50 filas
                 if index % 50 == 0:
-                    self.stdout.write(f"Procesando fila {index + 1}/{total_rows}...")
+                    elapsed = time.time() - start_time
+                    self.stdout.write(f"⏱️  Procesando fila {index + 1}/{total_rows} - Tiempo transcurrido: {timedelta(seconds=int(elapsed))}")
 
                 # Limpieza de columnas
                 sku = str(row["Numero de parte"])
@@ -121,20 +136,13 @@ class Command(BaseCommand):
                 # Verificar imagen usando caché (solo verifica URLs no vistas antes)
                 if not skip_image_check:
                     if image not in verified_images:
-                        # Primera vez que vemos esta URL, verificarla
                         original_image = image
                         image = verify_image_url(image, default_image)
-                        verified_images[original_image] = image  # Guardar en caché
+                        verified_images[original_image] = image
                         
                         if image == default_image and original_image != default_image:
                             imagenes_invalidas += 1
-                            self.stdout.write(
-                                self.style.WARNING(
-                                    f"Imagen inválida en fila {index}: {original_image}"
-                                )
-                            )
                     else:
-                        # Ya verificamos esta URL antes, usar el resultado del caché
                         image = verified_images[image]
 
                 # Obtener o crear categoría
@@ -162,7 +170,6 @@ class Command(BaseCommand):
                     product.provider = provider
                     product.save()
                     actualizados += 1
-                    created = False
                     
                 except Product.DoesNotExist:
                     # Crear nuevo producto
@@ -188,7 +195,6 @@ class Command(BaseCommand):
                         provider=provider,
                     )
                     creados += 1
-                    created = True
 
                 # Crear compatibilidad SOLO si no existe
                 compatibility, comp_created = Compatibility.objects.get_or_create(
@@ -207,13 +213,23 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR(f"Error al procesar la fila {index}: {e}"))
                 continue
 
+        # ============ FINALIZAR TIMER ============
+        end_time = time.time()
+        total_time = end_time - start_time
+        
         self.stdout.write(self.style.SUCCESS(
-            f'\n=== RESUMEN ===\n'
-            f'Productos sin stock filtrados: {productos_filtrados}\n'
-            f'Productos nuevos creados: {creados}\n'
-            f'Productos actualizados: {actualizados}\n'
-            f'Compatibilidades nuevas: {compatibles}\n'
-            f'Compatibilidades duplicadas: {compatibles_duplicados}\n'
-            f'Imágenes inválidas reemplazadas: {imagenes_invalidas}\n'
-            f'URLs de imágenes únicas verificadas: {len(verified_images)}'
+            f'\n{"="*60}\n'
+            f'✅ PROCESO COMPLETADO\n'
+            f'{"="*60}\n'
+            f'⏱️  Tiempo total: {timedelta(seconds=int(total_time))} ({total_time:.2f} segundos)\n'
+            f'📦 Productos sin stock filtrados: {productos_filtrados}\n'
+            f'✨ Productos nuevos creados: {creados}\n'
+            f'🔄 Productos actualizados: {actualizados}\n'
+            f'🔗 Compatibilidades nuevas: {compatibles}\n'
+            f'♻️  Compatibilidades duplicadas: {compatibles_duplicados}\n'
+            f'🖼️  Imágenes inválidas reemplazadas: {imagenes_invalidas}\n'
+            f'🌐 URLs de imágenes únicas verificadas: {len(verified_images)}\n'
+            f'{"="*60}\n'
+            f'⚡ Velocidad: {total_rows/total_time:.2f} productos/segundo\n'
+            f'{"="*60}'
         ))

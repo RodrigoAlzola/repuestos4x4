@@ -2,6 +2,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from threading import Thread
 
 
 def send_registration_email(user_email, full_name):
@@ -10,28 +11,71 @@ def send_registration_email(user_email, full_name):
     
     html_message = f"""
     <html>
-        <body style="font-family: Arial, sans-serif;">
-            <h2 style="color: #333;">¡Hola {full_name}!</h2>
-            <p>Gracias por registrarte en <strong>4x4MAX</strong>.</p>
-            <p>Estamos emocionados de tenerte con nosotros. Ya puedes comenzar a explorar nuestro catálogo de repuestos de autos.</p>
-            <br>
-            <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-            <br>
-            <p>Saludos,<br><strong>El equipo de 4x4MAX</strong></p>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #28a745; color: white; padding: 20px; text-align: center; border-radius: 5px;">
+                <h1 style="margin: 0;">¡Bienvenido a 4x4MAX!</h1>
+            </div>
+            
+            <div style="padding: 20px; background-color: #f8f9fa; margin-top: 20px; border-radius: 5px;">
+                <h2 style="color: #333;">¡Hola {full_name}!</h2>
+                <p style="color: #555; line-height: 1.6;">
+                    Gracias por registrarte en <strong>4x4MAX</strong>.
+                </p>
+                <p style="color: #555; line-height: 1.6;">
+                    Estamos emocionados de tenerte con nosotros. Ya puedes comenzar a explorar 
+                    nuestro catálogo de repuestos 4x4.
+                </p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="https://4x4max.cl/all_products/" 
+                       style="background-color: #28a745; color: white; padding: 12px 30px; 
+                              text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Ver Catálogo
+                    </a>
+                </div>
+                
+                <p style="color: #555; line-height: 1.6;">
+                    Si tienes alguna pregunta, no dudes en contactarnos respondiendo a este correo.
+                </p>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 20px; text-align: center; color: #777; font-size: 0.9em;">
+                <p style="margin: 5px 0;">Saludos,<br><strong>El equipo de 4x4MAX</strong></p>
+                <p style="margin: 5px 0;">🌐 <a href="https://4x4max.cl" style="color: #28a745;">4x4max.cl</a></p>
+            </div>
         </body>
     </html>
     """
     
     plain_message = strip_tags(html_message)
     
-    send_mail(
-        subject=subject,
-        message=plain_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user_email],
-        html_message=html_message,
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user_email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        print(f"✅ Email de bienvenida enviado a {user_email}")
+    except Exception as e:
+        print(f"❌ Error enviando email de bienvenida a {user_email}: {e}")
+        raise  # Re-lanza el error para que el thread lo capture
+
+
+def send_registration_email_async(user_email, full_name):
+    """Envía email de bienvenida de forma asíncrona"""
+    def send_in_background():
+        try:
+            send_registration_email(user_email, full_name)
+        except Exception as e:
+            # El error ya se imprimió en send_registration_email
+            pass
+    
+    email_thread = Thread(target=send_in_background)
+    email_thread.daemon = True
+    email_thread.start()
 
 
 def send_order_confirmation_email(order):

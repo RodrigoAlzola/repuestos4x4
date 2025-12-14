@@ -13,7 +13,7 @@ from django.db.models import Q
 import json
 from cart.cart import Cart
 from django.views.decorators.cache import never_cache
-from store.emails import send_registration_email
+from store.emails import send_registration_email_async
 
 # Create your views here.
 def home(request):
@@ -65,7 +65,6 @@ def logout_user(request):
     messages.success(request, ('You have been logged out...'))
     return redirect('home')
 
-from store.emails import send_registration_email  # Ajusta según tu estructura de apps
 
 def register_user(request):
     form = SignUpForm()
@@ -74,7 +73,7 @@ def register_user(request):
         if form.is_valid():
             email = form.cleaned_data['email']
             
-            # Verificar si el email ya existe en User o Profile
+            # Verificar si el email ya existe
             if User.objects.filter(email=email).exists() or Profile.objects.filter(email=email).exists():
                 messages.error(request, 'Este correo electrónico ya está registrado. Por favor usa otro.')
                 return redirect('register')
@@ -82,20 +81,17 @@ def register_user(request):
             # Guardar el usuario
             user = form.save()
             
-            # Crear o actualizar el Profile con los datos del formulario
+            # Crear o actualizar el Profile
             profile, created = Profile.objects.get_or_create(user=user)
             profile.full_name = f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}"
             profile.phone = form.cleaned_data['phone']
             profile.email = email
             profile.save()
             
-            # Enviar email de bienvenida
-            try:
-                send_registration_email(email, profile.full_name)
-                messages.success(request, '¡Cuenta creada exitosamente! Hemos enviado un correo de confirmación.')
-            except Exception as e:
-                print(f"Error enviando email de bienvenida: {e}")
-                messages.success(request, 'Cuenta creada exitosamente! Por favor completa tu información de envío.')
+            # Enviar email de bienvenida en background (NO BLOQUEA)
+            send_registration_email_async(email, profile.full_name)
+            
+            messages.success(request, 'Cuenta creada exitosamente! Por favor completa tu información de envío.')
             
             # Log in user
             username = form.cleaned_data['username']
