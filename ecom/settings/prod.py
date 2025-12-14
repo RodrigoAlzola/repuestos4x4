@@ -35,6 +35,14 @@ DATABASES = {
 TRANSBANK_COMMERCE_CODE = os.environ.get('PROD_TRANSBANK_COMMERCE_CODE')
 TRANSBANK_API_KEY = os.environ.get('PROD_TRANSBANK_API_KEY')
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.zoho.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')  # noreply@4x4max.cl
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')  # Password de Zoho
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@4x4max.cl')
+EMAIL_TIMEOUT = 10  # Timeout de 10 segundos
 
 # Seguridad para producción
 SECURE_SSL_REDIRECT = True
