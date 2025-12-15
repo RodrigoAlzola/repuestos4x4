@@ -83,8 +83,18 @@ def send_registration_email_async(user_email, full_name):
     logger.info("[EMAIL] Thread iniciado para envío asíncrono")
 
 
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils.html import strip_tags
+from threading import Thread
+import logging
+
+logger = logging.getLogger(__name__)
+
 def send_order_confirmation_email(order):
     """Envía email de confirmación de compra"""
+    logger.info(f"[ORDER EMAIL] Iniciando envío para orden #{order.id}")
+    
     subject = f'Confirmación de Orden #{order.id} - 4x4MAX'
     
     # Obtener items de la orden
@@ -134,6 +144,22 @@ def send_order_confirmation_email(order):
         </div>
         """
     
+    # Workshop message
+    workshop_message = ""
+    if order.workshop:
+        workshop_message = f"""
+        <div style="background-color: #d1ecf1; padding: 15px; border-left: 4px solid #0c5460; margin: 20px 0;">
+            <strong>🔧 Taller:</strong> {order.workshop.name}<br>
+            <strong>Dirección:</strong> {order.workshop.address1}, {order.workshop.commune}, {order.workshop.city}<br>
+            <strong>Teléfono:</strong> {order.workshop.phone}<br><br>
+            <em>Por favor contacta al taller para agendar tu hora de instalación.</em>
+        </div>
+        """
+    
+    # Next steps
+    next_steps_workshop = '<li>Contacta al taller para agendar tu instalación</li>' if order.workshop else ''
+    next_steps_mixed = '<li>Los productos locales e internacionales pueden llegar en fechas diferentes</li>' if order.has_international_items and local_items else ''
+    
     html_message = f"""
     <html>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -157,7 +183,7 @@ def send_order_confirmation_email(order):
                 <h3>Dirección de Envío</h3>
                 <p style="white-space: pre-line;">{order.shipping_address}</p>
                 
-                {f'<div style="background-color: #d1ecf1; padding: 15px; border-left: 4px solid #0c5460; margin: 20px 0;"><strong>🔧 Taller:</strong> {order.workshop.name}<br><strong>Dirección:</strong> {order.workshop.address1}, {order.workshop.commune}, {order.workshop.city}<br><strong>Teléfono:</strong> {order.workshop.phone}<br><br><em>Por favor contacta al taller para agendar tu hora de instalación.</em></div>' if order.workshop else ''}
+                {workshop_message}
                 
                 <h3>Productos</h3>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -184,16 +210,16 @@ def send_order_confirmation_email(order):
                     <h4>Próximos Pasos:</h4>
                     <ol>
                         <li>Recibirás notificaciones cuando tu(s) pedido(s) sea(n) despachado(s)</li>
-                        {'<li>Los productos locales e internacionales pueden llegar en fechas diferentes</li>' if order.has_international_items and local_items else ''}
-                        {'<li>Contacta al taller para agendar tu instalación</li>' if order.workshop else ''}
-                        <li>Si tienes alguna pregunta, contáctanos</li>
+                        {next_steps_mixed}
+                        {next_steps_workshop}
+                        <li>Si tienes alguna pregunta, contáctanos respondiendo a este correo</li>
                     </ol>
                 </div>
             </div>
             
             <div style="background-color: #343a40; color: white; padding: 20px; text-align: center; margin-top: 30px;">
                 <p>Gracias por confiar en 4x4MAX</p>
-                <p style="font-size: 0.9em;">Este es un correo automático, por favor no responder.</p>
+                <p style="font-size: 0.9em;">🌐 <a href="https://4x4max.cl" style="color: #28a745;">4x4max.cl</a></p>
             </div>
         </body>
     </html>
@@ -201,11 +227,32 @@ def send_order_confirmation_email(order):
     
     plain_message = strip_tags(html_message)
     
-    send_mail(
-        subject=subject,
-        message=plain_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[order.email],
-        html_message=html_message,
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[order.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        logger.info(f"[ORDER EMAIL] ✅ Email enviado exitosamente a {order.email}")
+        print(f"✅ Email de confirmación enviado a {order.email} para orden #{order.id}")
+    except Exception as e:
+        logger.error(f"[ORDER EMAIL] ❌ Error enviando email: {e}")
+        print(f"❌ Error enviando email de orden #{order.id}: {e}")
+        raise
+
+
+def send_order_confirmation_email_async(order):
+    """Envía email de confirmación de orden de forma asíncrona"""
+    def send_in_background():
+        try:
+            send_order_confirmation_email(order)
+        except Exception as e:
+            logger.error(f"[ORDER EMAIL ASYNC] Error en thread: {e}")
+    
+    email_thread = Thread(target=send_in_background)
+    email_thread.daemon = True
+    email_thread.start()
+    logger.info(f"[ORDER EMAIL] Thread iniciado para orden #{order.id}")

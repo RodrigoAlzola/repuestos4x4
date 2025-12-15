@@ -10,7 +10,7 @@ from store.forms import GuestUserForm, UserInfoForm
 from workshop.models import Workshop
 import datetime
 import uuid
-from store.emails import send_order_confirmation_email
+from store.emails import send_order_confirmation_email_async
 
 from transbank.webpay.webpay_plus.transaction import Transaction
 from django.conf import settings
@@ -294,7 +294,7 @@ def evaluate_payment(request):
                 
                 # Enviar email de confirmación
                 try:
-                    send_order_confirmation_email(order)
+                    send_order_confirmation_email_async(order)
                 except Exception as e:
                     print(f"Error enviando email de confirmación: {e}")
                 
