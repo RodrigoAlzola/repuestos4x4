@@ -35,14 +35,10 @@ DATABASES = {
 TRANSBANK_COMMERCE_CODE = os.environ.get('PROD_TRANSBANK_COMMERCE_CODE')
 TRANSBANK_API_KEY = os.environ.get('PROD_TRANSBANK_API_KEY')
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.zoho.com'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') 
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') 
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
-EMAIL_TIMEOUT = 30  # Timeout de 10 segundos
+EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+DEFAULT_FROM_EMAIL = 'no-reply@4x4max.cl'
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
 
 # Seguridad para producción
 SECURE_SSL_REDIRECT = True
@@ -55,20 +51,11 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 import logging
 
 # Configurar logging de email
-logging.basicConfig(level=logging.DEBUG)
-email_logger = logging.getLogger('django.core.mail')
-email_logger.setLevel(logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
+# email_logger = logging.getLogger('django.core.mail')
+# email_logger.setLevel(logging.DEBUG)
 
 # Print config al iniciar
-print("\n" + "="*60)
-print("EMAIL CONFIGURATION:")
-print(f"Backend: {EMAIL_BACKEND}")
-print(f"Host: {EMAIL_HOST}")
-print(f"Port: {EMAIL_PORT}")
-print(f"TLS: {EMAIL_USE_TLS}")
-print(f"User: {os.environ.get('EMAIL_HOST_USER', 'NOT SET ❌')}")
-print(f"Password exists: {'YES ✅' if os.environ.get('EMAIL_HOST_PASSWORD') else 'NO ❌'}")
-print(f"From: {os.environ.get('DEFAULT_FROM_EMAIL', 'NOT SET ❌')}")
-print(f"Timeout: {EMAIL_TIMEOUT}")
-print("="*60 + "\n")
-# =====================================================
+# print("\n" + "="*60)
+# print("EMAIL CONFIGURATION:")
+# print(f"Backend: {EMAIL_BACKEND}")
