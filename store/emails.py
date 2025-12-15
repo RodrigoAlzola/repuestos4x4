@@ -52,16 +52,6 @@ def send_registration_email(user_email, full_name):
     plain_message = strip_tags(html_message)
     
     try:
-
-        logger.info(f"[EMAIL] Configuración:")
-        logger.info(f"  - Host: {settings.EMAIL_HOST}")
-        logger.info(f"  - Port: {settings.EMAIL_PORT}")
-        logger.info(f"  - User: {settings.EMAIL_HOST_USER}")
-        logger.info(f"  - From: {settings.DEFAULT_FROM_EMAIL}")
-        logger.info(f"  - To: {user_email}")
-        
-        logger.info("[EMAIL] Intentando enviar...")
-
         send_mail(
             subject=subject,
             message=plain_message,
