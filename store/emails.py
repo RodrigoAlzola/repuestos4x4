@@ -1,9 +1,9 @@
 from django.core.mail import send_mail
 from django.conf import settings
-from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from threading import Thread
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +61,10 @@ def send_registration_email(user_email, full_name):
             fail_silently=False,
         )
 
-        logger.info(f"[EMAIL] ✅ Email enviado exitosamente a {user_email}")
-        print(f"✅ Email de bienvenida enviado a {user_email}")
+        # logger.info(f"[EMAIL] ✅ Email enviado exitosamente a {user_email}")
+        # print(f"✅ Email de bienvenida enviado a {user_email}")
     except Exception as e:
-        print(f"❌ Error enviando email de bienvenida a {user_email}: {e}")
+        # print(f"❌ Error enviando email de bienvenida a {user_email}: {e}")
         raise  # Re-lanza el error para que el thread lo capture
 
 
@@ -81,15 +81,6 @@ def send_registration_email_async(user_email, full_name):
     email_thread.daemon = True
     email_thread.start()
     logger.info("[EMAIL] Thread iniciado para envío asíncrono")
-
-
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils.html import strip_tags
-from threading import Thread
-import logging
-
-logger = logging.getLogger(__name__)
 
 def send_order_confirmation_email(order):
     """Envía email de confirmación de compra"""
@@ -236,11 +227,11 @@ def send_order_confirmation_email(order):
             html_message=html_message,
             fail_silently=False,
         )
-        logger.info(f"[ORDER EMAIL] ✅ Email enviado exitosamente a {order.email}")
-        print(f"✅ Email de confirmación enviado a {order.email} para orden #{order.id}")
+        # logger.info(f"[ORDER EMAIL] ✅ Email enviado exitosamente a {order.email}")
+        # print(f"✅ Email de confirmación enviado a {order.email} para orden #{order.id}")
     except Exception as e:
-        logger.error(f"[ORDER EMAIL] ❌ Error enviando email: {e}")
-        print(f"❌ Error enviando email de orden #{order.id}: {e}")
+        # logger.error(f"[ORDER EMAIL] ❌ Error enviando email: {e}")
+        # print(f"❌ Error enviando email de orden #{order.id}: {e}")
         raise
 
 
@@ -255,4 +246,4 @@ def send_order_confirmation_email_async(order):
     email_thread = Thread(target=send_in_background)
     email_thread.daemon = True
     email_thread.start()
-    logger.info(f"[ORDER EMAIL] Thread iniciado para orden #{order.id}")
+    # logger.info(f"[ORDER EMAIL] Thread iniciado para orden #{order.id}")

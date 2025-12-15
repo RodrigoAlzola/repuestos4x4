@@ -241,7 +241,7 @@ def process_payment(request):
             token = response['token']
             url = response['url']
 
-            print(response, token, url)
+            # print(response, token, url)
 
             return redirect(f"{url}?token_ws={token}")
         
