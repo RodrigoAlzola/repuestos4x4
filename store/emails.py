@@ -3,7 +3,9 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from threading import Thread
+import logging
 
+logger = logging.getLogger(__name__)
 
 def send_registration_email(user_email, full_name):
     """Envía email de bienvenida cuando se registra un usuario"""
@@ -50,6 +52,16 @@ def send_registration_email(user_email, full_name):
     plain_message = strip_tags(html_message)
     
     try:
+
+        logger.info(f"[EMAIL] Configuración:")
+        logger.info(f"  - Host: {settings.EMAIL_HOST}")
+        logger.info(f"  - Port: {settings.EMAIL_PORT}")
+        logger.info(f"  - User: {settings.EMAIL_HOST_USER}")
+        logger.info(f"  - From: {settings.DEFAULT_FROM_EMAIL}")
+        logger.info(f"  - To: {user_email}")
+        
+        logger.info("[EMAIL] Intentando enviar...")
+
         send_mail(
             subject=subject,
             message=plain_message,
@@ -58,6 +70,8 @@ def send_registration_email(user_email, full_name):
             html_message=html_message,
             fail_silently=False,
         )
+
+        logger.info(f"[EMAIL] ✅ Email enviado exitosamente a {user_email}")
         print(f"✅ Email de bienvenida enviado a {user_email}")
     except Exception as e:
         print(f"❌ Error enviando email de bienvenida a {user_email}: {e}")
@@ -76,6 +90,7 @@ def send_registration_email_async(user_email, full_name):
     email_thread = Thread(target=send_in_background)
     email_thread.daemon = True
     email_thread.start()
+    logger.info("[EMAIL] Thread iniciado para envío asíncrono")
 
 
 def send_order_confirmation_email(order):

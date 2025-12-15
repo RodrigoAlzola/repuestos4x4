@@ -49,3 +49,26 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+# ==================== EMAIL DEBUG ====================
+import logging
+
+# Configurar logging de email
+logging.basicConfig(level=logging.DEBUG)
+email_logger = logging.getLogger('django.core.mail')
+email_logger.setLevel(logging.DEBUG)
+
+# Print config al iniciar
+print("\n" + "="*60)
+print("EMAIL CONFIGURATION:")
+print(f"Backend: {EMAIL_BACKEND}")
+print(f"Host: {EMAIL_HOST}")
+print(f"Port: {EMAIL_PORT}")
+print(f"TLS: {EMAIL_USE_TLS}")
+print(f"User: {os.environ.get('EMAIL_HOST_USER', 'NOT SET ❌')}")
+print(f"Password exists: {'YES ✅' if os.environ.get('EMAIL_HOST_PASSWORD') else 'NO ❌'}")
+print(f"From: {os.environ.get('DEFAULT_FROM_EMAIL', 'NOT SET ❌')}")
+print(f"Timeout: {EMAIL_TIMEOUT}")
+print("="*60 + "\n")
+# =====================================================
