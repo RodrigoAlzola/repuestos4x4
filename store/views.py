@@ -257,7 +257,8 @@ def all_products(request):
     if search_query:
         products = products.filter(
             Q(name__icontains=search_query) |
-            Q(description__icontains=search_query)
+            Q(description__icontains=search_query) |
+            Q(sku__icontains=search_query)
         )
 
     # Aplicar filtros

@@ -3,8 +3,8 @@ import pandas as pd
 from store.models import Category, Product, Compatibility, Provider
 import math
 import requests
-import time  # ← AGREGAR ESTO
-from datetime import timedelta  # ← AGREGAR ESTO
+import time
+from datetime import timedelta
 
 
 def convertion(value):
@@ -37,6 +37,11 @@ class Command(BaseCommand):
             action='store_true',
             help='Omite la verificación de imágenes (más rápido)'
         )
+        parser.add_argument(
+            '--update-existing',
+            action='store_true',
+            help='Actualiza productos existentes en lugar de saltarlos'
+        )
 
     def handle(self, *args, **kwargs):
         # ============ INICIAR TIMER ============
@@ -57,6 +62,7 @@ class Command(BaseCommand):
 
         csv_path = kwargs['csv_path']
         skip_image_check = kwargs.get('skip_image_check', False)
+        update_existing = kwargs.get('update_existing', False)
 
         try:
             df = pd.read_csv(csv_path, encoding='latin-1')
@@ -85,14 +91,54 @@ class Command(BaseCommand):
         # Filtrar: mantener solo productos con stock local O internacional > 0
         df = df[(df['BR SOH'] > 0) | (df['MELSOH'] > 0)]
         
-        productos_filtrados = total_inicial - len(df)
+        productos_sin_stock = total_inicial - len(df)
         
         self.stdout.write(self.style.WARNING(
-            f'Productos sin stock filtrados: {productos_filtrados} de {total_inicial}'
+            f'📦 Productos sin stock filtrados: {productos_sin_stock} de {total_inicial}'
         ))
+        
+        # ============ NUEVO: FILTRAR PRODUCTOS EXISTENTES ============
+        self.stdout.write(self.style.WARNING(f'🔍 Verificando productos existentes en la base de datos...'))
+        
+        # Obtener todos los part_numbers existentes en la BD
+        existing_part_numbers = set(
+            Product.objects.filter(provider=provider)
+            .values_list('sku', flat=True)
+        )
+        
         self.stdout.write(self.style.SUCCESS(
-            f'Productos a procesar: {len(df)}'
+            f'📊 Productos existentes en BD: {len(existing_part_numbers)}'
         ))
+        
+        # Filtrar DataFrame según si queremos actualizar o no
+        if update_existing:
+            # Mantener todos (actualizará los existentes)
+            productos_a_procesar = len(df)
+            productos_saltados = 0
+            self.stdout.write(self.style.WARNING(
+                f'🔄 Modo actualización: Se procesarán todos los productos (actualizando existentes)'
+            ))
+        else:
+            # Filtrar productos que ya existen (solo crear nuevos)
+            df_original_count = len(df)
+            df = df[~df['Numero de parte'].astype(str).isin(existing_part_numbers)]
+            productos_saltados = df_original_count - len(df)
+            productos_a_procesar = len(df)
+            
+            self.stdout.write(self.style.SUCCESS(
+                f'⏭️  Productos existentes saltados: {productos_saltados}'
+            ))
+        
+        self.stdout.write(self.style.SUCCESS(
+            f'✨ Productos nuevos a procesar: {productos_a_procesar}'
+        ))
+        # =============================================================
+
+        if len(df) == 0:
+            self.stdout.write(self.style.WARNING(
+                '⚠️  No hay productos nuevos para procesar. Todos ya existen en la base de datos.'
+            ))
+            return
 
         creados = 0
         actualizados = 0
@@ -151,25 +197,30 @@ class Command(BaseCommand):
                 # Buscar si el producto ya existe
                 try:
                     product = Product.objects.get(part_number=part_number)
-                    # Actualizar producto existente
-                    product.sku = sku
-                    product.name = name
-                    product.price = price
-                    product.category = category
-                    product.description = description
-                    product.image = image
-                    product.stock = stock
-                    product.stock_international = stock_international
-                    product.tariff_code = tariff_code
-                    product.weight_kg = weight
-                    product.length_cm = length
-                    product.height_cm = height
-                    product.width_cm = width
-                    product.volume_m3 = volume
-                    product.motor = motor
-                    product.provider = provider
-                    product.save()
-                    actualizados += 1
+                    
+                    # Si estamos en modo update, actualizar
+                    if update_existing:
+                        product.sku = sku
+                        product.name = name
+                        product.price = price
+                        product.category = category
+                        product.description = description
+                        product.image = image
+                        product.stock = stock
+                        product.stock_international = stock_international
+                        product.tariff_code = tariff_code
+                        product.weight_kg = weight
+                        product.length_cm = length
+                        product.height_cm = height
+                        product.width_cm = width
+                        product.volume_m3 = volume
+                        product.motor = motor
+                        product.provider = provider
+                        product.save()
+                        actualizados += 1
+                    else:
+                        # No debería llegar aquí si el filtrado funcionó
+                        continue
                     
                 except Product.DoesNotExist:
                     # Crear nuevo producto
@@ -222,7 +273,8 @@ class Command(BaseCommand):
             f'✅ PROCESO COMPLETADO\n'
             f'{"="*60}\n'
             f'⏱️  Tiempo total: {timedelta(seconds=int(total_time))} ({total_time:.2f} segundos)\n'
-            f'📦 Productos sin stock filtrados: {productos_filtrados}\n'
+            f'📦 Productos sin stock filtrados: {productos_sin_stock}\n'
+            f'⏭️  Productos existentes saltados: {productos_saltados}\n'
             f'✨ Productos nuevos creados: {creados}\n'
             f'🔄 Productos actualizados: {actualizados}\n'
             f'🔗 Compatibilidades nuevas: {compatibles}\n'
@@ -230,6 +282,6 @@ class Command(BaseCommand):
             f'🖼️  Imágenes inválidas reemplazadas: {imagenes_invalidas}\n'
             f'🌐 URLs de imágenes únicas verificadas: {len(verified_images)}\n'
             f'{"="*60}\n'
-            f'⚡ Velocidad: {total_rows/total_time:.2f} productos/segundo\n'
+            f'⚡ Velocidad: {total_rows/total_time if total_time > 0 else 0:.2f} productos/segundo\n'
             f'{"="*60}'
         ))
