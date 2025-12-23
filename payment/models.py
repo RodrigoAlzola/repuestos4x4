@@ -6,33 +6,54 @@ from django.dispatch import receiver
 import datetime
 
 class ShippingAddress(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    shipping_full_name = models.CharField(max_length=255)
-    shipping_phone = models.CharField(max_length=20)
-    shipping_email = models.CharField(max_length=255)
-    shipping_address1 = models.CharField(max_length=255)
-    shipping_address2 = models.CharField(max_length=255, null=True, blank=True)
-    shipping_city = models.CharField(max_length=255)
-    shipping_state = models.CharField(max_length=255)
-    shipping_commune = models.CharField(max_length=255)
-    shipping_zipcode = models.CharField(max_length=255, null=True, blank=True)
-    shipping_country = models.CharField(max_length=255)
-
-    #Don't pluralize address
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shipping_addresses')
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255)
+    phone = models.CharField(max_length=20)
+    address1 = models.CharField(max_length=255)
+    address2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    commune = models.CharField(max_length=100, blank=True, null=True)
+    region = models.CharField(max_length=100)
+    zipcode = models.CharField(max_length=20, blank=True, null=True)
+    country = models.CharField(max_length=100, default='Chile')
+    
+    # NUEVO: Campo de comentarios
+    notes = models.TextField(
+        blank=True, 
+        null=True,
+        max_length=300,
+        verbose_name='Comentarios adicionales',
+        help_text='Ej: "Dejar con conserje", "Timbre no funciona", "Casa blanca con reja negra"'
+    )
+    
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
     class Meta:
-        verbose_name_plural = "Shipping Address"
-
+        ordering = ['-is_default', '-created_at']
+        verbose_name_plural = "Shipping Addresses"
+    
     def __str__(self):
-        return f'Shipping Address - {str(self.id)}'
+        return f"{self.full_name} - {self.address1}, {self.city}"
+    
+    def save(self, *args, **kwargs):
+        if not self.pk and not ShippingAddress.objects.filter(user=self.user).exists():
+            self.is_default = True
+        
+        if self.is_default:
+            ShippingAddress.objects.filter(user=self.user).exclude(pk=self.pk).update(is_default=False)
+        
+        super().save(*args, **kwargs)
     
 # Create a Shipping Address by default when user sign up
-def create_shipping(sender, instance, created, **kwargs):
-    if created:
-        user_shipping= ShippingAddress(user=instance)
-        user_shipping.save()
+#def create_shipping(sender, instance, created, **kwargs):
+#    if created:
+#        user_shipping= ShippingAddress(user=instance)
+#        user_shipping.save()
 
 # Automate the profile
-post_save.connect(create_shipping, sender=User)
+# post_save.connect(create_shipping, sender=User)
 
 
 

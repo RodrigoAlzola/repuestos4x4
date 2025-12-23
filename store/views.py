@@ -14,6 +14,8 @@ import json
 from cart.cart import Cart
 from django.views.decorators.cache import never_cache
 from store.emails import send_registration_email_async
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 
 # Create your views here.
 def home(request):
@@ -146,53 +148,152 @@ def update_password(request):
         messages.success(request, "You must been Logged in to access that page.")
         return redirect('home')
     
-def update_info(request):
-    if request.user.is_authenticated:
-        # Obtener o crear Profile y ShippingAddress
-        current_user, created = Profile.objects.get_or_create(user=request.user)
-        shipping_user, created = ShippingAddress.objects.get_or_create(user=request.user)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from store.models import Profile
+from payment.models import ShippingAddress
+from payment.forms import ShippingForm
 
-        if request.method == 'POST':
-            form_type = request.POST.get('form_type')
-            
-            # Determinar qué formulario se envió
-            if form_type == 'personal':
-                # Solo procesar UserInfoForm
-                form = UserInfoForm(request.POST, instance=current_user)
-                if form.is_valid():
-                    form.save()
-                    messages.success(request, "Tu información personal ha sido actualizada correctamente.")
-                    return redirect('update_info')
-                else:
-                    messages.error(request, "Hubo un error en la información personal. Por favor verifica los datos.")
-                    shipping_form = ShippingForm(instance=shipping_user)
-                    
-            elif form_type == 'shipping':
-                # Solo procesar ShippingForm
-                shipping_form = ShippingForm(request.POST, instance=shipping_user)
-                if shipping_form.is_valid():
-                    shipping_form.save()
-                    messages.success(request, "Tu dirección de envío ha sido actualizada correctamente.")
-                    return redirect('update_info')
-                else:
-                    messages.error(request, "Hubo un error en la dirección de envío. Por favor verifica los datos.")
-                    form = UserInfoForm(instance=current_user)
-            else:
-                # Si no se especifica form_type, inicializar ambos
-                form = UserInfoForm(instance=current_user)
-                shipping_form = ShippingForm(instance=shipping_user)
-        else:
-            # GET request - mostrar formularios con datos actuales
-            form = UserInfoForm(instance=current_user)
-            shipping_form = ShippingForm(instance=shipping_user)
+@login_required
+def update_info(request):
+    # Obtener o crear Profile
+    current_user, created = Profile.objects.get_or_create(user=request.user)
+    
+    # Obtener todas las direcciones del usuario
+    shipping_addresses = ShippingAddress.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    
+    # Verificar si tiene direcciones
+    has_addresses = shipping_addresses.exists()
+    
+    # Límite de direcciones
+    MAX_ADDRESSES = 10
+    can_add_more = shipping_addresses.count() < MAX_ADDRESSES
+    
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
         
-        return render(request, 'update_info.html', {
-            'form': form, 
-            'shipping_form': shipping_form
+        if form_type == 'shipping_new':
+            # Agregar nueva dirección de envío
+            if not can_add_more:
+                messages.error(request, f"❌ Has alcanzado el límite de {MAX_ADDRESSES} direcciones.")
+                return redirect('update_info')
+            
+            shipping_form = ShippingForm(request.POST)
+            if shipping_form.is_valid():
+                new_address = shipping_form.save(commit=False)
+                new_address.user = request.user
+                
+                # Si es la primera dirección, hacerla default
+                if not has_addresses:
+                    new_address.is_default = True
+                
+                new_address.save()
+                messages.success(request, "✅ Nueva dirección agregada correctamente.")
+                return redirect('update_info')
+            else:
+                # DEBUG: Mostrar errores específicos
+                error_messages = []
+                for field, errors in shipping_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"{field}: {error}")
+                
+                error_text = " | ".join(error_messages)
+                messages.error(request, f"❌ Errores: {error_text}")
+                
+                # También imprimir en consola para debugging
+                print("ERRORES DEL FORMULARIO:")
+                print(shipping_form.errors)
+                print("DATOS POST:")
+                print(request.POST)
+        
+        elif form_type == 'shipping_edit':
+            # Editar dirección existente
+            address_id = request.POST.get('address_id')
+            shipping_address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+            
+            shipping_form = ShippingForm(request.POST, instance=shipping_address)
+            if shipping_form.is_valid():
+                shipping_form.save()
+                messages.success(request, "✅ Dirección actualizada correctamente.")
+                return redirect('update_info')
+            else:
+                messages.error(request, "❌ Error al actualizar la dirección.")
+    
+    # GET request
+    # Formulario para nueva dirección
+    # Solo pre-llenar si es la PRIMERA dirección
+    if not has_addresses:
+        # Primera dirección: pre-llenar con datos del usuario
+        shipping_form_new = ShippingForm(initial={
+            'full_name': current_user.full_name or request.user.get_full_name(),
+            'email': current_user.email or request.user.email,
+            'phone': current_user.phone,
         })
     else:
-        messages.error(request, "Debes iniciar sesión para acceder a esta página.")
-        return redirect('login')
+        # Direcciones adicionales: formulario vacío
+        shipping_form_new = ShippingForm()
+    
+    return render(request, 'update_info.html', {
+        'profile': current_user,  # Para mostrar info estática
+        'shipping_form_new': shipping_form_new,
+        'shipping_addresses': shipping_addresses,
+        'has_addresses': has_addresses,
+        'can_add_more': can_add_more,
+        'max_addresses': MAX_ADDRESSES,
+        'addresses_count': shipping_addresses.count(),
+    })
+
+
+@login_required
+def delete_shipping_address(request, address_id):
+    """Eliminar dirección de envío (excepto la default)"""
+    address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    
+    # No permitir eliminar la dirección default
+    if address.is_default:
+        messages.error(request, "❌ No puedes eliminar tu dirección principal. Marca otra como principal primero.")
+        return redirect('update_info')
+    
+    address.delete()
+    messages.success(request, "✅ Dirección eliminada correctamente.")
+    return redirect('update_info')
+
+
+@login_required
+def set_default_address(request, address_id):
+    """Marcar una dirección como predeterminada"""
+    address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    
+    # Desmarcar todas las demás
+    ShippingAddress.objects.filter(user=request.user).update(is_default=False)
+    
+    # Marcar esta como default
+    address.is_default = True
+    address.save()
+    
+    messages.success(request, "✅ Dirección principal actualizada.")
+    return redirect('update_info')
+
+
+@login_required
+def edit_shipping_address(request, address_id):
+    """Editar dirección de envío"""
+    address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    
+    if request.method == 'POST':
+        form = ShippingForm(request.POST, instance=address)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ Dirección actualizada correctamente.")
+            return redirect('update_info')
+    else:
+        form = ShippingForm(instance=address)
+    
+    return render(request, 'edit_shipping_address.html', {
+        'form': form,
+        'address': address
+    })
     
 
 def product(request, pk):

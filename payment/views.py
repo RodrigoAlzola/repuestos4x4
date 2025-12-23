@@ -30,18 +30,17 @@ def checkout(request):
     guest_user_form = None
 
     # Workshop data
-    workshop_id = workshop_id = request.POST.get('workshop_id') or request.GET.get('workshop_id')
+    workshop_id = request.POST.get('workshop_id') or request.GET.get('workshop_id')
     shipping_form = None
     is_workshop_shipping = False
 
-    # Limpiar datos previos de sesión
+    # Limpiar datos previos de sesión en GET
     if request.method == 'GET':
-       request.session.pop('guest_info', None)
-      # request.session.pop('personal_shipping_info', None)
-      # request.session.pop('workshop_shipping_info', None)
+        request.session.pop('guest_info', None)
 
-    # Obtener datos personales desde Profile
+    # ====== USUARIOS AUTENTICADOS ======
     if request.user.is_authenticated:
+        # Obtener datos personales desde Profile
         try:
             profile = Profile.objects.get(user=request.user)
             personal_info = {
@@ -49,16 +48,19 @@ def checkout(request):
                 'phone': profile.phone,
                 'email': profile.email,
             }
-            #print("DEBUG - Personal Info:", personal_info)
-            #print("DEBUG - Profile phone:", profile.phone) 
         except Profile.DoesNotExist:
-            #print("Profile NO encontrado para usuario:", request.user)
             personal_info = {
                 'full_name': '',
                 'phone': '',
                 'email': '',
             }
 
+        # Obtener todas las direcciones del usuario
+        shipping_addresses = ShippingAddress.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+        has_addresses = shipping_addresses.exists()
+        can_add_more = shipping_addresses.count() < 10
+
+        # ====== FLUJO CON TALLER ======
         if workshop_id:
             try:
                 selected_workshop = Workshop.objects.get(id=workshop_id)
@@ -77,17 +79,58 @@ def checkout(request):
                     'shipping_country': selected_workshop.country,
                 }
                 shipping_form = ShippingForm(initial=shipping_data)
-               # request.session['workshop_shipping_info'] = shipping_data
 
                 if request.method == 'POST':
-                        print("POST recibido con taller")
+                    shipping_info = shipping_data
+                    billing_form = PaymentForm()
 
-                        shipping_info = shipping_data
+                    request.session['personal_info'] = personal_info
+                    request.session['shipping_info'] = shipping_info
+                    request.session['workshop_id'] = workshop_id
+                    
+                    return render(request, "payment/billing_info.html", {
+                        "cart_products": cart_products,
+                        "quantities": quantities,
+                        "total": total,
+                        "shipping_info": shipping_info,
+                        "personal_info": personal_info,
+                        "billing_form": billing_form
+                    })
+
+            except Workshop.DoesNotExist:
+                shipping_form = ShippingForm()
+
+        # ====== FLUJO SIN TALLER (DIRECCIONES PERSONALES) ======
+        else:
+            is_workshop_shipping = False
+
+            if request.method == 'POST':
+                action = request.POST.get('action')
+
+                # ====== SELECCIONAR DIRECCIÓN EXISTENTE ======
+                if action == 'select_address':
+                    address_id = request.POST.get('address_id')
+                    
+                    try:
+                        selected_address = ShippingAddress.objects.get(id=address_id, user=request.user)
+                        
+                        shipping_info = {
+                            'shipping_full_name': selected_address.full_name,
+                            'shipping_phone': selected_address.phone,
+                            'shipping_email': selected_address.email,
+                            'shipping_address1': selected_address.address1,
+                            'shipping_address2': selected_address.address2 or '',
+                            'shipping_city': selected_address.city,
+                            'shipping_state': selected_address.region or '',
+                            'shipping_commune': selected_address.commune or '',
+                            'shipping_zipcode': selected_address.zipcode or '',
+                            'shipping_country': selected_address.country,
+                        }
+
                         billing_form = PaymentForm()
-
                         request.session['personal_info'] = personal_info
                         request.session['shipping_info'] = shipping_info
-                        request.session['workshop_id'] = workshop_id
+                        
                         return render(request, "payment/billing_info.html", {
                             "cart_products": cart_products,
                             "quantities": quantities,
@@ -95,44 +138,77 @@ def checkout(request):
                             "shipping_info": shipping_info,
                             "personal_info": personal_info,
                             "billing_form": billing_form
-                            }) 
+                        })
+                    
+                    except ShippingAddress.DoesNotExist:
+                        messages.error(request, "❌ Dirección no encontrada.")
+                        return redirect('checkout')
 
-            except Workshop.DoesNotExist:
-                print("No se encontró el taller o no se envió POST")
-                shipping_form = ShippingForm()
+                # ====== AGREGAR NUEVA DIRECCIÓN ======
+                elif action == 'add_new_address':
+                    if not can_add_more:
+                        messages.error(request, "❌ Has alcanzado el límite de 10 direcciones.")
+                        return redirect('checkout')
+                    
+                    shipping_form = ShippingForm(request.POST)
+                    
+                    if shipping_form.is_valid():
+                        new_address = shipping_form.save(commit=False)
+                        new_address.user = request.user
+                        
+                        # Si es la primera dirección, hacerla default
+                        if not has_addresses:
+                            new_address.is_default = True
+                        
+                        new_address.save()
+                        messages.success(request, "✅ Nueva dirección agregada y seleccionada.")
+                        
+                        # Usar la nueva dirección recién creada
+                        shipping_info = {
+                            'shipping_full_name': new_address.full_name,
+                            'shipping_phone': new_address.phone,
+                            'shipping_email': new_address.email,
+                            'shipping_address1': new_address.address1,
+                            'shipping_address2': new_address.address2 or '',
+                            'shipping_city': new_address.city,
+                            'shipping_state': new_address.region or '',
+                            'shipping_commune': new_address.commune or '',
+                            'shipping_zipcode': new_address.zipcode or '',
+                            'shipping_country': new_address.country,
+                        }
 
+                        billing_form = PaymentForm()
+                        request.session['personal_info'] = personal_info
+                        request.session['shipping_info'] = shipping_info
+                        
+                        return render(request, "payment/billing_info.html", {
+                            "cart_products": cart_products,
+                            "quantities": quantities,
+                            "total": total,
+                            "shipping_info": shipping_info,
+                            "personal_info": personal_info,
+                            "billing_form": billing_form
+                        })
+                    else:
+                        # Mostrar errores del formulario
+                        for field, errors in shipping_form.errors.items():
+                            for error in errors:
+                                messages.error(request, f"❌ {field}: {error}")
 
-        # Si no hay taller, usar dirección personal
-        else:
-            is_workshop_shipping = False
+            # GET request - mostrar formulario vacío para nueva dirección
+            shipping_form = ShippingForm()
 
-            try:
-                shipping_user = ShippingAddress.objects.get(user=request.user)
-                shipping_form = ShippingForm(request.POST or None, instance=shipping_user)
-            except ShippingAddress.DoesNotExist:
-                shipping_form = ShippingForm(request.POST or None)
-
-            if request.method == 'POST' and shipping_form.is_valid():
-                shipping_info = shipping_form.cleaned_data
-                billing_form = PaymentForm()
-
-                request.session['personal_info'] = personal_info
-                request.session['shipping_info'] = shipping_info
-                return render(request, "payment/billing_info.html", {
-                    "cart_products": cart_products,
-                    "quantities": quantities,
-                    "total": total,
-                    "shipping_info": shipping_info,
-                    "personal_info": personal_info,
-                    "billing_form": billing_form
-            })       
-        
-    # Flujo para invitados
+    # ====== FLUJO PARA INVITADOS ======
     else:
-        workshop_id = False  # invitados no pueden seleccionar taller
+        workshop_id = False
         is_workshop_shipping = False
+        shipping_addresses = []
+        has_addresses = False
+        can_add_more = False
+        
         guest_data = request.session.get('guest_info')
         guest_user_form = GuestUserForm(request.POST or None, initial=guest_data)
+        
         if request.method == 'POST' and guest_user_form.is_valid():
             guest_data = guest_user_form.cleaned_data
             request.session['guest_info'] = guest_data
@@ -146,7 +222,7 @@ def checkout(request):
 
             shipping_info = {
                 'shipping_full_name': guest_data['full_name'],
-                'shipping_phone': guest_data['phone'], 
+                'shipping_phone': guest_data['phone'],
                 'shipping_email': guest_data['email'],
                 'shipping_address1': guest_data['address1'],
                 'shipping_address2': guest_data['address2'],
@@ -158,9 +234,9 @@ def checkout(request):
             }
 
             billing_form = PaymentForm()
-
             request.session['personal_info'] = personal_info
             request.session['shipping_info'] = shipping_info
+            
             return render(request, "payment/billing_info.html", {
                 "cart_products": cart_products,
                 "quantities": quantities,
@@ -168,9 +244,9 @@ def checkout(request):
                 "shipping_info": shipping_info,
                 "personal_info": personal_info,
                 "billing_form": billing_form
-            })        
+            })
 
-    
+    # Renderizar página de checkout
     return render(request, "payment/checkout.html", {
         "cart_products": cart_products,
         "quantities": quantities,
@@ -180,6 +256,9 @@ def checkout(request):
         "is_workshop_shipping": is_workshop_shipping,
         "guest_user_form": guest_user_form,
         "workshop_id": workshop_id,
+        "shipping_addresses": shipping_addresses if request.user.is_authenticated else [],
+        "has_addresses": has_addresses if request.user.is_authenticated else False,
+        "can_add_more": can_add_more if request.user.is_authenticated else False,
     })
 
 

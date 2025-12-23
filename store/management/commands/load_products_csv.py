@@ -8,7 +8,7 @@ from datetime import timedelta
 
 
 def convertion(value):
-    tarif = 1.025
+    tarif = 1.19
     return math.ceil(value*tarif/100)*100
 
 def verify_image_url(url, default_url="https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"):

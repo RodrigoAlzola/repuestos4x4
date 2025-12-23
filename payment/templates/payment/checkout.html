@@ -16,116 +16,373 @@
 <div class="container-fluid px-3">
   <div class="row justify-content-between">
 
-      <!-- Shipping Info centrado -->
-      <div class="col-lg-6 mx-auto">
-      <!--<form method="POST" action="{% url 'checkout' %}">-->
-    {% if user.is_authenticated %}
-      <form method="POST" action="{% url 'checkout' %}">
+    <!-- Shipping Info centrado -->
+    <div class="col-lg-6 mx-auto">
+      
+      {% if user.is_authenticated %}
         
-      {% csrf_token %}
-          <!-- Personal Info -->
-          <div class="card mb-4">
-            <div class="card-header">Personal Info</div>
-            <div class="card-body">
-              <div class="mb-0"><strong>Nombre:</strong> {{ personal_info.full_name }}</div>
-              <div class="mb-0"><strong>Teléfono:</strong> {{ personal_info.phone }}</div>
-              <div class="mb-0"><strong>Email:</strong> {{ personal_info.email }}</div>
-            </div>
+        <!-- Personal Info -->
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <i class="bi bi-person-circle me-2"></i>Información Personal
           </div>
-
-          <!-- Mensaje de destino -->
-          <div class="alert alert-info text-center">
-            {% if is_workshop_shipping %}
-              <strong>Este pedido será enviado al taller seleccionado.</strong>
-            {% else %}
-              <strong>Este pedido será enviado a tu dirección personal.</strong>
-            {% endif %}
+          <div class="card-body">
+            <div class="mb-0"><strong>Nombre:</strong> {{ personal_info.full_name }}</div>
+            <div class="mb-0"><strong>Teléfono:</strong> {{ personal_info.phone }}</div>
+            <div class="mb-0"><strong>Email:</strong> {{ personal_info.email }}</div>
           </div>
+        </div>
 
-                <!-- Shipping Address -->
-          <div class="card mb-0">
-            <div class="card-header">Shipping Address</div>
-            <div class="card-body">
-              {% if is_workshop_shipping %}
+        <!-- Mensaje de destino -->
+        <div class="alert {% if is_workshop_shipping %}alert-info{% else %}alert-success{% endif %} text-center">
+          {% if is_workshop_shipping %}
+            <i class="bi bi-tools me-2"></i><strong>Este pedido será enviado al taller seleccionado.</strong>
+          {% else %}
+            <i class="bi bi-house-door me-2"></i><strong>Selecciona tu dirección de envío.</strong>
+          {% endif %}
+        </div>
+
+        <!-- ====== FLUJO CON TALLER ====== -->
+        {% if is_workshop_shipping %}
+          <form method="POST" action="{% url 'checkout' %}">
+            {% csrf_token %}
+            <input type="hidden" name="workshop_id" value="{{ workshop_id }}">
+            
+            <div class="card mb-4">
+              <div class="card-header bg-info text-white">
+                <i class="bi bi-geo-alt me-2"></i>Dirección del Taller
+              </div>
+              <div class="card-body">
                 <div class="mb-1"><strong>Taller:</strong> {{ shipping_form.shipping_full_name.value }}</div>
                 <div class="mb-1"><strong>Dirección:</strong> {{ shipping_form.shipping_address1.value }}</div>
                 <div class="mb-1"><strong>Ciudad:</strong> {{ shipping_form.shipping_city.value }}</div>
-                <div class="mb-1"><strong>Estado:</strong> {{ shipping_form.shipping_state.value }}</div>
+                <div class="mb-1"><strong>Region:</strong> {{ shipping_form.shipping_state.value }}</div>
                 <div class="mb-1"><strong>Comuna:</strong> {{ shipping_form.shipping_commune.value }}</div>
                 <div class="mb-1"><strong>Código Postal:</strong> {{ shipping_form.shipping_zipcode.value }}</div>
-                <input type="hidden" name="workshop_id" value="{{ workshop_id }}">
-              {% else %}
-                <div class="mb-0">{{ shipping_form.shipping_full_name.label_tag }} {{ shipping_form.shipping_full_name }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_phone.label_tag }} {{ shipping_form.shipping_phone }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_email.label_tag }} {{ shipping_form.shipping_email }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_address1.label_tag }} {{ shipping_form.shipping_address1 }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_address2.label_tag }} {{ shipping_form.shipping_address2 }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_city.label_tag }} {{ shipping_form.shipping_city }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_state.label_tag }} {{ shipping_form.shipping_state }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_commune.label_tag }} {{ shipping_form.shipping_commune }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_zipcode.label_tag }} {{ shipping_form.shipping_zipcode }}</div>
-                <div class="mb-0">{{ shipping_form.shipping_country.label_tag }} {{ shipping_form.shipping_country }}</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Volver a Talleres
+              </a>
+              <button type="submit" class="btn btn-danger">
+                Continuar <i class="bi bi-arrow-right ms-2"></i>
+              </button>
+            </div>
+          </form>
+
+        <!-- ====== FLUJO SIN TALLER (DIRECCIONES PERSONALES) ====== -->
+        {% else %}
+          
+          <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-geo-alt me-2"></i>Direcciones de Envío</span>
+              {% if has_addresses %}
+                <span class="badge bg-light text-dark">{{ shipping_addresses.count }}/10</span>
               {% endif %}
             </div>
-          </div>
-          <br><br>
-                <div class="d-flex justify-content-between">
-  <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">Back to Workshop</a>
-  <button type="submit" class="btn btn-danger">Continue</button>
-</div>
-</form>
+            <div class="card-body">
 
+              {% if has_addresses %}
+                <!-- ====== DIRECCIONES EXISTENTES ====== -->
+                <h6 class="mb-3">Selecciona una dirección:</h6>
+                
+                {% for address in shipping_addresses %}
+                  <div class="card mb-3 {% if address.is_default %}border-success{% endif %}">
+                    <div class="card-body">
+                      <div class="form-check">
+                        <input 
+                          class="form-check-input" 
+                          type="radio" 
+                          name="selected_address" 
+                          id="address_{{ address.id }}"
+                          value="{{ address.id }}"
+                          {% if address.is_default %}checked{% endif %}
+                        >
+                        <label class="form-check-label w-100" for="address_{{ address.id }}">
+                          {% if address.is_default %}
+                            <span class="badge bg-success mb-2">
+                              <i class="bi bi-star-fill"></i> Principal
+                            </span>
+                          {% endif %}
+                          
+                          <h6 class="mb-2">{{ address.full_name }}</h6>
+                          <p class="mb-0 text-muted small">
+                            <i class="bi bi-envelope me-1"></i>{{ address.email }}<br>
+                            <i class="bi bi-telephone me-1"></i>{{ address.phone }}<br>
+                            <i class="bi bi-house me-1"></i>{{ address.address1 }}
+                            {% if address.address2 %}, {{ address.address2 }}{% endif %}<br>
+                            {{ address.commune }}, {{ address.city }}
+                            {% if address.region %}, {{ address.region }}{% endif %}
+                            {% if address.zipcode %} - {{ address.zipcode }}{% endif %}<br>
+                            <i class="bi bi-globe me-1"></i>{{ address.country }}
+                          </p>
+                          
+                          {% if address.notes %}
+                            <div class="alert alert-light mt-2 mb-0 py-1">
+                              <small>
+                                <i class="bi bi-chat-left-text me-1"></i>
+                                <strong>Nota:</strong> {{ address.notes }}
+                              </small>
+                            </div>
+                          {% endif %}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+                <!-- Botón para agregar nueva dirección -->
+                {% if can_add_more %}
+                  <button 
+                    class="btn btn-outline-success w-100" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#newAddressForm"
+                  >
+                    <i class="bi bi-plus-circle me-2"></i>Agregar Nueva Dirección
+                  </button>
+
+                  <!-- ====== FORMULARIO NUEVA DIRECCIÓN (COLAPSABLE) ====== -->
+                  <div class="collapse mt-3" id="newAddressForm">
+                    <div class="card card-body bg-light">
+                      <h6 class="mb-3">Nueva Dirección de Envío</h6>
+                      <form method="POST" action="{% url 'checkout' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_new_address">
+                        
+                        <div class="row">
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.full_name.label_tag }}
+                            {{ shipping_form.full_name }}
+                          </div>
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.email.label_tag }}
+                            {{ shipping_form.email }}
+                          </div>
+                        </div>
+                        
+                        <div class="row">
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.phone.label_tag }}
+                            {{ shipping_form.phone }}
+                          </div>
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.city.label_tag }}
+                            {{ shipping_form.city }}
+                          </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                          {{ shipping_form.address1.label_tag }}
+                          {{ shipping_form.address1 }}
+                        </div>
+                        
+                        <div class="row">
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.address2.label_tag }}
+                            {{ shipping_form.address2 }}
+                          </div>
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.commune.label_tag }}
+                            {{ shipping_form.commune }}
+                          </div>
+                        </div>
+                        
+                        <div class="row">
+                          <div class="col-md-4 mb-2">
+                            {{ shipping_form.region.label_tag }}
+                            {{ shipping_form.region }}
+                          </div>
+                          <div class="col-md-4 mb-2">
+                            {{ shipping_form.zipcode.label_tag }}
+                            {{ shipping_form.zipcode }}
+                          </div>
+                          <div class="col-md-4 mb-2">
+                            {{ shipping_form.country.label_tag }}
+                            {{ shipping_form.country }}
+                          </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                          {{ shipping_form.notes.label_tag }}
+                          {{ shipping_form.notes }}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">
+                          <i class="bi bi-plus-circle me-2"></i>Agregar y Usar Esta Dirección
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#newAddressForm">
+                          Cancelar
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Has alcanzado el límite de 10 direcciones.
+                  </div>
+                {% endif %}
+
+              {% else %}
+                <!-- ====== NO TIENE DIRECCIONES - FORMULARIO DIRECTO ====== -->
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle me-2"></i>
+                  No tienes direcciones guardadas. Agrega tu primera dirección.
+                </div>
+
+                <form method="POST" action="{% url 'checkout' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="add_new_address">
+                  
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      {{ shipping_form.full_name.label_tag }}
+                      {{ shipping_form.full_name }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                      {{ shipping_form.email.label_tag }}
+                      {{ shipping_form.email }}
+                    </div>
+                  </div>
+                  
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      {{ shipping_form.phone.label_tag }}
+                      {{ shipping_form.phone }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                      {{ shipping_form.city.label_tag }}
+                      {{ shipping_form.city }}
+                    </div>
+                  </div>
+                  
+                  <div class="mb-2">
+                    {{ shipping_form.address1.label_tag }}
+                    {{ shipping_form.address1 }}
+                  </div>
+                  
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      {{ shipping_form.address2.label_tag }}
+                      {{ shipping_form.address2 }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                      {{ shipping_form.commune.label_tag }}
+                      {{ shipping_form.commune }}
+                    </div>
+                  </div>
+                  
+                  <div class="row">
+                    <div class="col-md-4 mb-2">
+                      {{ shipping_form.region.label_tag }}
+                      {{ shipping_form.region }}
+                    </div>
+                    <div class="col-md-4 mb-2">
+                      {{ shipping_form.zipcode.label_tag }}
+                      {{ shipping_form.zipcode }}
+                    </div>
+                    <div class="col-md-4 mb-2">
+                      {{ shipping_form.country.label_tag }}
+                      {{ shipping_form.country }}
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    {{ shipping_form.notes.label_tag }}
+                    {{ shipping_form.notes }}
+                  </div>
+                  
+                  <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-save me-2"></i>Guardar y Continuar
+                  </button>
+                </form>
+              {% endif %}
+
+            </div>
+          </div>
+
+<!-- Botones de navegación -->
+          {% if has_addresses %}
+            <form method="POST" action="{% url 'checkout' %}" id="select-address-form">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="select_address">
+              <input type="hidden" name="address_id" id="selected_address_id" value="{{ shipping_addresses.first.id }}">
+              
+              <div class="d-flex justify-content-between mt-3">
+                <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-arrow-left me-2"></i>Volver a Talleres
+                </a>
+                <button type="submit" class="btn btn-success">
+                  Usar Dirección Seleccionada <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+              </div>
+            </form>
+          {% else %}
+            <div class="d-flex justify-content-between mt-3">
+              <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Volver a Talleres
+              </a>
+            </div>
+          {% endif %}
+
+        {% endif %}
+
+      <!-- ====== USUARIOS INVITADOS ====== -->
       {% else %}
-      <form method="POST" action="{% url 'checkout' %}">
-        {% csrf_token %}
-      <!-- Vista para usuarios invitados -->
+        <form method="POST" action="{% url 'checkout' %}">
+          {% csrf_token %}
+          
           <div class="card mb-4">
-          <div class="card-header">Información de Envío</div>
-          <div class="card-body">
-            <div class="mb-1">{{ guest_user_form.full_name.label_tag }} {{ guest_user_form.full_name }}</div>
-            <div class="mb-1">{{ guest_user_form.phone.label_tag }} {{ guest_user_form.phone }}</div>
-            <div class="mb-4">{{ guest_user_form.email.label_tag }} {{ guest_user_form.email }}</div>
-            <div class="mb-1">{{ guest_user_form.address1.label_tag }} {{ guest_user_form.address1 }}</div>
-            <div class="mb-1">{{ guest_user_form.address2.label_tag }} {{ guest_user_form.address2 }}</div>
-            <div class="mb-1">{{ guest_user_form.city.label_tag }} {{ guest_user_form.city }}</div>
-            <div class="mb-1">{{ guest_user_form.state.label_tag }} {{ guest_user_form.state }}</div>
-            <div class="mb-1">{{ guest_user_form.commune.label_tag }} {{ guest_user_form.commune }}</div>
-            <div class="mb-1">{{ guest_user_form.zipcode.label_tag }} {{ guest_user_form.zipcode }}</div>
-            <div class="mb-1">{{ guest_user_form.country.label_tag }} {{ guest_user_form.country }}</div>
+            <div class="card-header bg-warning">
+              <i class="bi bi-person me-2"></i>Información de Envío (Invitado)
+            </div>
+            <div class="card-body">
+              <div class="mb-2">{{ guest_user_form.full_name.label_tag }} {{ guest_user_form.full_name }}</div>
+              <div class="mb-2">{{ guest_user_form.phone.label_tag }} {{ guest_user_form.phone }}</div>
+              <div class="mb-3">{{ guest_user_form.email.label_tag }} {{ guest_user_form.email }}</div>
+              <div class="mb-2">{{ guest_user_form.address1.label_tag }} {{ guest_user_form.address1 }}</div>
+              <div class="mb-2">{{ guest_user_form.address2.label_tag }} {{ guest_user_form.address2 }}</div>
+              <div class="mb-2">{{ guest_user_form.city.label_tag }} {{ guest_user_form.city }}</div>
+              <div class="mb-2">{{ guest_user_form.state.label_tag }} {{ guest_user_form.state }}</div>
+              <div class="mb-2">{{ guest_user_form.commune.label_tag }} {{ guest_user_form.commune }}</div>
+              <div class="mb-2">{{ guest_user_form.zipcode.label_tag }} {{ guest_user_form.zipcode }}</div>
+              <div class="mb-2">{{ guest_user_form.country.label_tag }} {{ guest_user_form.country }}</div>
+            </div>
           </div>
-        </div>
-        <br><br>
-                       <div class="d-flex justify-content-between">
-  <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">Back to Workshop</a>
-  <button type="submit" class="btn btn-danger">Continue</button>
-</div>
-</form>
 
-
+          <div class="d-flex justify-content-between">
+            <a href="{% url 'workshop' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-2"></i>Volver
+            </a>
+            <button type="submit" class="btn btn-danger">
+              Continuar <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+          </div>
+        </form>
       {% endif %}
 
-        <br><br>
-
-
-      
+      <br><br>
     </div>
 
     <!-- Order summary on the right -->
     <div class="col-md-4">
       <div class="card">
-        <div class="card-header">
-          Order Summary
+        <div class="card-header bg-dark text-white">
+          <i class="bi bi-cart3 me-2"></i>Resumen de Orden
         </div>
         <div class="card-body">
           {% for product in cart_products %}
             <strong>{{ product.name }}</strong><br>
             {% if product.is_sale %}
-              <strike>$ {{ product.price|currency_format }}</strike> &nbsp $ {{ product.sale_price|currency_format }}
+              <strike>$ {{ product.price|currency_format }}</strike> &nbsp; $ {{ product.sale_price|currency_format }}
             {% else %}
               $ {{ product.price|currency_format }}
             {% endif %}
             <br>
-            <small>Quantity:</small>
+            <small>Cantidad:</small>
             {% for key, value in quantities.items %}
               {% if key == product.id|slugify %}
                 {{ value }}
@@ -133,9 +390,12 @@
             {% endfor %}
             <br><br>
           {% endfor %}
-          <strong>Total: ${{ total|currency_format }}</strong>
-          <br><br>
-          <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
+          <hr>
+          <h5><strong>Total: ${{ total|currency_format }}</strong></h5>
+          <br>
+          <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-pencil me-2"></i>Actualizar Items
+          </a>
         </div>
       </div>
     </div>
@@ -143,4 +403,21 @@
 </div>
 
 <br/><br/>
+
+<!-- Script para actualizar el address_id seleccionado -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const radioButtons = document.querySelectorAll('input[name="selected_address"]');
+  const hiddenInput = document.getElementById('selected_address_id');
+  
+  if (radioButtons && hiddenInput) {
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', function() {
+        hiddenInput.value = this.value;
+      });
+    });
+  }
+});
+</script>
+
 {% endblock %}

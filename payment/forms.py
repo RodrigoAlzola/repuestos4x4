@@ -1,24 +1,74 @@
 from django import forms
 from .models import ShippingAddress
 
+from django import forms
+from .models import ShippingAddress
+
+from django import forms
+from .models import ShippingAddress
+
+from django import forms
+from .models import ShippingAddress
+
+from django import forms
+from .models import ShippingAddress
+
 class ShippingForm(forms.ModelForm):
-    shipping_full_name = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}), required=True)
-    shipping_phone = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}), required=True)
-    shipping_email = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Email'}), required=True)
-    shipping_address1 = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address1'}), required=True)
-    shipping_address2 = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address2'}), required=False)
-    shipping_city = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}), required=True)
-    shipping_state = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}), required=True)
-    shipping_commune = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Commune'}), required=True)
-    shipping_zipcode = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Zipcode'}), required=False)
-    shipping_country = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Country'}), required=True)
-
-
     class Meta:
         model = ShippingAddress
-        fields = ['shipping_full_name', 'shipping_phone', 'shipping_email', 'shipping_address1', 'shipping_address2', 'shipping_city', 'shipping_state', 'shipping_commune', 'shipping_zipcode', 'shipping_country',]
-
-        exclude = ['user',]
+        fields = ['full_name', 'email', 'phone', 'address1', 'address2', 
+                  'city', 'commune', 'region', 'zipcode', 'country', 'notes']
+        widgets = {
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Nombre completo'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'correo@ejemplo.com'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '+56 9 1234 5678'
+            }),
+            'address1': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Calle y número'
+            }),
+            'address2': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Depto, oficina (opcional)'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Santiago'
+            }),
+            'commune': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'La Florida'
+            }),
+            'region': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Región Metropolitana'
+            }),
+            'zipcode': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '7550000'
+            }),
+            'country': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Chile'
+            }),  # ← Campo visible ahora
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3,
+                'placeholder': 'Ej: "Dejar con conserje", "Timbre no funciona", "Casa con reja negra"'
+            }),
+        }
+        labels = {
+            'notes': 'Comentarios adicionales (opcional)',
+            'country': 'País',
+        }
 
 class PaymentForm(forms.Form):
     card_name = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Card Name'}), required=True)
