@@ -75,8 +75,53 @@ class Order(models.Model):
     date_shipped = models.DateTimeField(blank=True, null=True)
     has_international_items = models.BooleanField(default=False)
 
+    # Buy order - generado automáticamente
+    buy_order = models.CharField(max_length=50, unique=True, null=True, blank=True, db_index=True)
+
+    # Informacion de pago
+    transaction_date = models.DateTimeField(null=True, blank=True)
+    authorization_code = models.CharField(max_length=50, null=True, blank=True)
+    payment_type_code = models.CharField(max_length=10, null=True, blank=True)  # VD, VN, etc.
+    installments_number = models.IntegerField(null=True, blank=True)
+    card_number = models.CharField(max_length=20, null=True, blank=True)  # últimos 4 dígitos
+    session_id = models.CharField(max_length=100, null=True, blank=True)
+    accounting_date = models.CharField(max_length=10, null=True, blank=True)
+    transaction_status = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date_order']
+    
+    def save(self, *args, **kwargs):
+        """Genera buy_order automáticamente si no existe"""
+        if not self.buy_order:
+            # Primera guardada sin buy_order
+            is_new = self.pk is None
+            super().save(*args, **kwargs)
+            
+            # Generar buy_order basado en ID y fecha
+            if is_new:
+                # Formato: 4X4-YYYYMMDD-XXXXXX
+                # Ejemplo: 4X4-20241223-000001
+                date_str = self.date_order.strftime('%Y%m%d')
+                self.buy_order = f"4X4-{date_str}-{self.id:06d}"
+                super().save(update_fields=['buy_order'])
+        else:
+            super().save(*args, **kwargs)
+    
     def __str__(self):
-        return f'Order - {str(self.id)}'
+        return f"Order #{self.id} - {self.buy_order or 'Pending'} - {self.full_name}"
+    
+    def get_payment_type_display(self):
+        """Retorna el tipo de pago en español"""
+        payment_types = {
+            'VD': 'Débito',
+            'VN': 'Crédito',
+            'VC': 'Crédito',
+            'SI': 'Crédito sin interés',
+            'S2': 'Crédito 2 cuotas sin interés',
+            'NC': 'Crédito sin interés',
+        }
+        return payment_types.get(self.payment_type_code, 'No especificado')
     
 # Auto add shipping date
 @receiver(pre_save, sender=Order)

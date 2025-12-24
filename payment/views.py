@@ -3,6 +3,7 @@ from cart.cart import Cart
 from payment.forms import ShippingForm, PaymentForm
 from payment.models import ShippingAddress
 from django.contrib import messages
+from django.utils import timezone
 from payment.models import Order, OrderItem
 from django.contrib.auth.models import User
 from store.models import Product, Profile
@@ -263,40 +264,138 @@ def checkout(request):
 
 
 
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.urls import reverse
+from django.conf import settings
+from cart.cart import Cart
+from payment.forms import PaymentForm
+from payment.models import Order
+from transbank.webpay.webpay_plus.transaction import Transaction
+import uuid
+
+
 def billing_info(request):
+    """
+    Vista unificada que:
+    1. GET: Muestra el formulario de billing
+    2. POST: Procesa el pago y redirige a Transbank
+    """
+    cart = Cart(request)
+    cart_products = cart.get_products()
+    quantities = cart.get_quants()
+    total = cart.cart_total()
+
+    # Validar que hay información de envío en sesión
+    shipping_info = request.session.get('shipping_info')
+    personal_info = request.session.get('personal_info')
+
+    if not shipping_info:
+        messages.error(request, "No se encontró información de envío. Por favor completa el checkout primero.")
+        return redirect('checkout')
+
     if request.method == 'POST':
-        # Validar términos y condiciones
+        # ===== VALIDAR TÉRMINOS Y CONDICIONES =====
         terms_accepted = request.POST.get('terms_accepted')
         
         if not terms_accepted or terms_accepted != 'true':
             messages.error(request, "Debes aceptar los Términos y Condiciones para continuar.")
+            return render(request, "payment/billing_info.html", {
+                "cart_products": cart_products,
+                "quantities": quantities,
+                "total": total,
+                "shipping_info": shipping_info,
+                "personal_info": personal_info,
+            })
+
+        # ===== CREAR LA ORDEN PRIMERO =====
+        try:
+            order = create_order_from_session(request)
+            # order.buy_order ya está generado automáticamente (ej: "4X4-20241223-000001")
+            
+        except Exception as e:
+            print(f"Error creando orden: {e}")
+            import traceback
+            traceback.print_exc()
+            messages.error(request, "Error al crear la orden. Intenta nuevamente.")
+            return render(request, "payment/billing_info.html", {
+                "cart_products": cart_products,
+                "quantities": quantities,
+                "total": total,
+                "shipping_info": shipping_info,
+                "personal_info": personal_info,
+            })
+
+        # ===== PROCESAR PAGO CON TRANSBANK =====
+        payment_method = request.POST.get('payment_method', 'webpay')
+        
+        if payment_method == 'webpay':
+            try:
+                # Inicializar transacción Transbank
+                tx = Transaction.build_for_integration(
+                    settings.TRANSBANK_COMMERCE_CODE,
+                    settings.TRANSBANK_API_KEY
+                )
+
+                # Crear transacción con el buy_order de la orden
+                response = tx.create(
+                    buy_order=order.buy_order,  # ← Usar buy_order generado
+                    session_id=str(order.id),   # ← Session ID = Order ID
+                    amount=int(total),
+                    return_url=request.build_absolute_uri(reverse('evaluate_payment'))
+                )
+
+                # Guardar session_id en la orden
+                order.session_id = str(order.id)
+                order.save(update_fields=['session_id'])
+
+                # Guardar en sesión para referencia
+                request.session['buy_order'] = order.buy_order
+                request.session['order_id'] = order.id
+
+                # Redirigir a Transbank
+                token = response['token']
+                url = response['url']
+                
+                return redirect(f"{url}?token_ws={token}")
+
+            except Exception as e:
+                print(f"Error creando transacción Transbank: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # Si falla Transbank, eliminar la orden creada
+                order.delete()
+                
+                messages.error(request, "Error al iniciar el pago con Transbank. Intenta nuevamente.")
+                return render(request, "payment/billing_info.html", {
+                    "cart_products": cart_products,
+                    "quantities": quantities,
+                    "total": total,
+                    "shipping_info": shipping_info,
+                    "personal_info": personal_info,
+                })
+        
+        elif payment_method == 'transferencia':
+            # Lógica futura para transferencia bancaria
+            messages.info(request, "Transferencia bancaria próximamente disponible.")
             return redirect('billing_info')
         
-        cart = Cart(request)
-        cart_products = cart.get_products()
-        quantities = cart.get_quants()
-        total = cart.cart_total()
+        else:
+            messages.error(request, "Método de pago no válido.")
+            return redirect('billing_info')
 
-        # CAMBIADO: Ahora solo busca 'shipping_info'
-        shipping_info = request.session.get('shipping_info')
-        personal_info = request.session.get('personal_info')
-
-        billing_form = PaymentForm()
-
+    else:
+        # ===== GET REQUEST - MOSTRAR FORMULARIO =====
         return render(request, "payment/billing_info.html", {
             "cart_products": cart_products,
             "quantities": quantities,
             "total": total,
             "shipping_info": shipping_info,
             "personal_info": personal_info,
-            "billing_form": billing_form
         })
 
-    else:
-        messages.error(request, "Acceso denegado.")
-        return redirect('home')
-
-
+# Eliminar si es que se usa billing info unificada
 def process_payment(request):
     if request.method == 'POST':
         # Obtener método de pago de la sesión
@@ -306,7 +405,7 @@ def process_payment(request):
             cart = Cart(request)
             total = int(cart.cart_total())
 
-            buy_order = str(uuid.uuid4()).replace('-', '')[:26]
+            buy_order = str(uuid.uuid4()).replace('-', '')[:8]
             session_id = str(uuid.uuid4())
             return_url = request.build_absolute_uri('/payment/evaluate_payment')
 
@@ -344,8 +443,16 @@ def evaluate_payment(request):
         tbk_orden_compra = request.GET.get('TBK_ORDEN_COMPRA')
         tbk_id_sesion = request.GET.get('TBK_ID_SESION')
         
-        # Si vienen estos parámetros, el usuario canceló
         if tbk_token or tbk_orden_compra or tbk_id_sesion:
+            # Usuario canceló - eliminar orden si existe
+            order_id = request.session.get('order_id')
+            if order_id:
+                try:
+                    order = Order.objects.get(id=order_id)
+                    order.delete()
+                except Order.DoesNotExist:
+                    pass
+            
             messages.error(request, "La transacción fue cancelada o anulada.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'cancelled',
@@ -367,8 +474,30 @@ def evaluate_payment(request):
             response = tx.commit(token)
 
             if response['status'] == 'AUTHORIZED':
-                # Pago exitoso
-                order = create_order_from_session(request)
+                # Pago exitoso - obtener orden existente
+                order_id = request.session.get('order_id')
+                buy_order = response.get('buy_order')
+                
+                # Buscar orden por ID o buy_order
+                order = None
+                if order_id:
+                    try:
+                        order = Order.objects.get(id=order_id)
+                    except Order.DoesNotExist:
+                        pass
+                
+                if not order and buy_order:
+                    try:
+                        order = Order.objects.get(buy_order=buy_order)
+                    except Order.DoesNotExist:
+                        pass
+                
+                if not order:
+                    raise ValueError("No se encontró la orden asociada")
+                
+                # Actualizar orden con datos de Transbank
+                update_order_with_transaction(order, response)
+                
                 order_items = order.orderitem_set.all()
                 
                 # Enviar email de confirmación
@@ -377,12 +506,40 @@ def evaluate_payment(request):
                 except Exception as e:
                     print(f"Error enviando email de confirmación: {e}")
                 
+                # Preparar datos para el template
+                transaction_data = {
+                    'order_number': order.id,
+                    'buy_order': response.get('buy_order'),
+                    'commerce_code': settings.TRANSBANK_COMMERCE_CODE,
+                    'amount': response.get('amount'),
+                    'authorization_code': response.get('authorization_code'),
+                    'transaction_date': response.get('transaction_date'),
+                    'payment_type': order.get_payment_type_display(),
+                    'payment_type_code': response.get('payment_type_code'),
+                    'installments': response.get('installments_number', 0),
+                    'card_number': response.get('card_detail', {}).get('card_number', 'N/A'),
+                    'status': response.get('status'),
+                }
+                
+                # Limpiar sesión
+                request.session.pop('buy_order', None)
+                request.session.pop('order_id', None)
+                
                 return render(request, "payment/payment_success.html", {
                     'order': order,
                     'order_items': order_items,
+                    'transaction': transaction_data,
                 })
             else:
-                # Pago rechazado
+                # Pago rechazado - eliminar orden
+                order_id = request.session.get('order_id')
+                if order_id:
+                    try:
+                        order = Order.objects.get(id=order_id)
+                        order.delete()
+                    except Order.DoesNotExist:
+                        pass
+                
                 messages.error(request, f"El pago fue rechazado. Estado: {response.get('status')}")
                 return render(request, 'payment/payment_failed.html', {
                     'reason': 'rejected',
@@ -392,18 +549,62 @@ def evaluate_payment(request):
                 
         except Exception as e:
             print(f"Error en evaluate_payment: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Eliminar orden si existe
+            order_id = request.session.get('order_id')
+            if order_id:
+                try:
+                    order = Order.objects.get(id=order_id)
+                    order.delete()
+                except Order.DoesNotExist:
+                    pass
+            
             messages.error(request, "Ocurrió un error al procesar el pago.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'error',
                 'message': 'Ocurrió un error técnico. Por favor intenta nuevamente o contacta con soporte.'
             })
     
-    # Si no viene por GET, redirigir
     messages.error(request, "Acceso inválido.")
     return redirect('cart_summary')
 
 
-def create_order_from_session(request):
+def update_order_with_transaction(order, transaction_response):
+    """Actualiza la orden con los datos de la transacción de Transbank"""
+    from django.utils import timezone
+    from datetime import datetime
+    
+    # Procesar fecha de transacción
+    transaction_date_str = transaction_response.get('transaction_date')
+    if transaction_date_str:
+        try:
+            transaction_date = datetime.strptime(transaction_date_str[:19], '%Y-%m-%dT%H:%M:%S')
+            order.transaction_date = timezone.make_aware(transaction_date)
+        except:
+            order.transaction_date = timezone.now()
+    
+    order.authorization_code = transaction_response.get('authorization_code')
+    order.payment_type_code = transaction_response.get('payment_type_code')
+    order.installments_number = transaction_response.get('installments_number', 0)
+    
+    # Obtener últimos 4 dígitos de la tarjeta
+    card_detail = transaction_response.get('card_detail', {})
+    order.card_number = card_detail.get('card_number', 'N/A')
+    
+    order.commerce_code = transaction_response.get('commerce_code') or settings.TRANSBANK_COMMERCE_CODE
+    order.accounting_date = transaction_response.get('accounting_date')
+    order.transaction_status = transaction_response.get('status')
+    
+    order.save()
+
+
+def create_order_from_session(request, transaction_response=None):
+    """
+    Crea la orden desde la sesión.
+    El buy_order se genera automáticamente en el método save() del modelo.
+    """
     cart = Cart(request)
     cart_products = cart.get_products()
     quantities = cart.get_quants()
@@ -445,7 +646,7 @@ def create_order_from_session(request):
     # Verificar si hay productos internacionales
     has_international = any(international_status.values())
 
-    # Crear la orden
+    # Crear la orden (buy_order se genera automáticamente)
     order = Order(
         user=user,
         full_name=full_name,
@@ -454,9 +655,13 @@ def create_order_from_session(request):
         shipping_address=shipping_address,
         amount_pay=amount_pay,
         workshop=workshop,
-        has_international_items=has_international  # NUEVO
+        has_international_items=has_international
     )
+    
+    # Guardar - esto generará automáticamente el buy_order
     order.save()
+    
+    # Ahora order.buy_order está disponible (ej: "4X4-20241223-000001")
 
     # Crear los ítems de la orden
     for product in cart_products:
@@ -471,7 +676,7 @@ def create_order_from_session(request):
                 user=user,
                 quantity=quantity,
                 price=price,
-                is_international=is_international  # NUEVO
+                is_international=is_international
             )
 
     # Limpiar sesión y carrito

@@ -6,8 +6,8 @@
 <header class="bg-dark py-5">
   <div class="container px-4 px-lg-5 my-5">
     <div class="text-center text-white">
-      <h1 class="display-4 fw-bolder">Billing Info</h1>
-      <p class="lead fw-normal text-white-50 mb-0">Enter your payment information</p>
+      <h1 class="display-4 fw-bolder">Información de Pago</h1>
+      <p class="lead fw-normal text-white-50 mb-0">Revisa tu información y confirma tu compra</p>
     </div>
   </div>
 </header>
@@ -17,111 +17,145 @@
   <div class="row justify-content-between">
     <!-- Billing Info Section -->
     <div class="col-lg-6 mx-auto">
-    <form method="POST" action="{% url 'process_payment' %}" id="paymentForm">
-  {% csrf_token %}
+      <!-- CAMBIO: action apunta a 'billing_info' en lugar de 'process_payment' -->
+      <form method="POST" action="{% url 'billing_info' %}" id="paymentForm">
+        {% csrf_token %}
 
-  <!-- Personal Info -->
-  <div class="card mb-4">
-    <div class="card-header">Personal Info</div>
-    <div class="card-body">
-      <div class="mb-1"><strong>Nombre:</strong> {{ personal_info.full_name }}</div>
-      <div class="mb-1"><strong>Teléfono:</strong> {{ personal_info.phone }}</div>
-      <div class="mb-1"><strong>Email:</strong> {{ personal_info.email }}</div>
-    </div>
-  </div>
-
-  <!-- Shipping Address -->
-  <div class="card mb-4">
-    <div class="card-header">Shipping Address</div>
-    <div class="card-body">
-      <div class="mb-1"><strong>Nombre:</strong> {{ shipping_info.shipping_full_name }}</div>
-      <div class="mb-1"><strong>Dirección:</strong> {{ shipping_info.shipping_address1 }}</div>
-      <div class="mb-1"><strong>Ciudad:</strong> {{ shipping_info.shipping_city }}</div>
-      <div class="mb-1"><strong>Estado:</strong> {{ shipping_info.shipping_state }}</div>
-      <div class="mb-1"><strong>Comuna:</strong> {{ shipping_info.shipping_commune }}</div>
-      <div class="mb-1"><strong>Código Postal:</strong> {{ shipping_info.shipping_zipcode }}</div>
-      <div class="mb-1"><strong>Pais:</strong> {{ shipping_info.shipping_country }}</div>
-    </div>
-  </div>
-
-  <!-- Método de Pago -->
-  <div class="card mb-4">
-    <div class="card-header">Selecciona tu método de pago</div>
-    <div class="card-body">
-      <div class="row">
-        <!-- WebPay -->
-        <div class="col-md-6 mb-3">
-          <input type="radio" class="btn-check" name="payment_method" id="webpay" value="webpay" checked required>
-          <label class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-3" for="webpay">
-            {% load static %}
-            <img src="{% static 'images/webpay-logo.png' %}" alt="WebPay" style="height: 50px; margin-bottom: 10px;">
-            <span>WebPay Plus</span> 
-            <small class="text-muted">Tarjetas de crédito y débito</small>
-          </label>
+        <!-- Personal Info -->
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <i class="bi bi-person-circle me-2"></i>Información Personal
+          </div>
+          <div class="card-body">
+            <div class="mb-1"><strong>Nombre:</strong> {{ personal_info.full_name }}</div>
+            <div class="mb-1"><strong>Teléfono:</strong> {{ personal_info.phone }}</div>
+            <div class="mb-1"><strong>Email:</strong> {{ personal_info.email }}</div>
+          </div>
         </div>
 
-        <!-- Placeholder para futuros métodos de pago -->
-        <div class="col-md-6 mb-3">
-          <input type="radio" class="btn-check" name="payment_method" id="transferencia" value="transferencia" disabled>
-          <label class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3" for="transferencia" style="opacity: 0.5;">
-            <i class="bi bi-bank" style="font-size: 50px; margin-bottom: 10px;"></i>
-            <span>Transferencia Bancaria</span>
-            <small class="text-muted">Próximamente</small>
-          </label>
+        <!-- Shipping Address -->
+        <div class="card mb-4">
+          <div class="card-header bg-success text-white">
+            <i class="bi bi-geo-alt me-2"></i>Dirección de Envío
+          </div>
+          <div class="card-body">
+            <div class="mb-1"><strong>Nombre:</strong> {{ shipping_info.shipping_full_name }}</div>
+            <div class="mb-1"><strong>Dirección:</strong> {{ shipping_info.shipping_address1 }}</div>
+            {% if shipping_info.shipping_address2 %}
+              <div class="mb-1"><strong>Depto/Oficina:</strong> {{ shipping_info.shipping_address2 }}</div>
+            {% endif %}
+            <div class="mb-1"><strong>Comuna:</strong> {{ shipping_info.shipping_commune }}</div>
+            <div class="mb-1"><strong>Ciudad:</strong> {{ shipping_info.shipping_city }}</div>
+            {% if shipping_info.shipping_state %}
+              <div class="mb-1"><strong>Región:</strong> {{ shipping_info.shipping_state }}</div>
+            {% endif %}
+            {% if shipping_info.shipping_zipcode %}
+              <div class="mb-1"><strong>Código Postal:</strong> {{ shipping_info.shipping_zipcode }}</div>
+            {% endif %}
+            <div class="mb-1"><strong>País:</strong> {{ shipping_info.shipping_country }}</div>
+          </div>
         </div>
-      </div>
 
-      <!-- Información del método seleccionado -->
-      <div id="payment-info" class="alert alert-info mt-3">
-        <strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.
-      </div>
-    </div>
-  </div>
+        <!-- Método de Pago -->
+        <div class="card mb-4">
+          <div class="card-header bg-info text-white">
+            <i class="bi bi-credit-card me-2"></i>Selecciona tu método de pago
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- WebPay -->
+              <div class="col-md-6 mb-3">
+                <input type="radio" class="btn-check" name="payment_method" id="webpay" value="webpay" checked required>
+                <label class="btn btn-outline-payment w-100 d-flex flex-column align-items-center py-3" for="webpay">
+                  {% load static %}
+                  <img src="{% static 'images/webpay-logo.png' %}" alt="WebPay" style="height: 50px; margin-bottom: 10px;">
+                  <span>WebPay Plus</span> 
+                  <small class="text-muted">Tarjetas de crédito y débito</small>
+                </label>
+              </div>
 
-  <!-- Términos y Condiciones -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="termsCheckbox" required>
-        <label class="form-check-label" for="termsCheckbox">
-          Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" onclick="event.preventDefault();">Términos y Condiciones</a>
-        </label>
-      </div>
-      <input type="hidden" name="terms_accepted" id="termsAcceptedInput" value="">
-    </div>
-  </div>
+              <!-- Placeholder para futuros métodos de pago -->
+              <div class="col-md-6 mb-3">
+                <input type="radio" class="btn-check" name="payment_method" id="transferencia" value="transferencia" disabled>
+                <label class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3" for="transferencia" style="opacity: 0.5;">
+                  <i class="bi bi-bank" style="font-size: 50px; margin-bottom: 10px;"></i>
+                  <span>Transferencia Bancaria</span>
+                  <small class="text-muted">Próximamente</small>
+                </label>
+              </div>
+            </div>
 
-  <br/>
-  <div class="d-flex justify-content-end">
-    <button type="submit" id="payButton" class="btn btn-danger" disabled>Pay Now</button>
-  </div>
-</form>
+            <!-- Información del método seleccionado -->
+            <div id="payment-info" class="alert alert-info mt-3">
+              <i class="bi bi-shield-check me-2"></i>
+              <strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.
+            </div>
+          </div>
+        </div>
+
+        <!-- Términos y Condiciones -->
+        <div class="card mb-4 border-warning">
+          <div class="card-body">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="termsCheckbox" required>
+              <label class="form-check-label" for="termsCheckbox">
+                Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" onclick="event.preventDefault();">Términos y Condiciones</a>
+              </label>
+            </div>
+            <input type="hidden" name="terms_accepted" id="termsAcceptedInput" value="">
+          </div>
+        </div>
+
+        <br/>
+        <!-- Botones de navegación -->
+        <div class="d-flex justify-content-between">
+          <a href="{% url 'checkout' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Volver
+          </a>
+          <button type="submit" id="payButton" class="btn btn-danger" disabled>
+  Pagar Ahora
+</button>
+        </div>
+      </form>
     </div>
 
     <!-- Order summary -->
     <div class="col-md-4">
-      <div class="card">
-        <div class="card-header">Order Summary</div>
+      <div class="card sticky-top" style="top: 20px;">
+        <div class="card-header bg-dark text-white">
+          <i class="bi bi-cart3 me-2"></i>Resumen de Orden
+        </div>
         <div class="card-body">
           {% for product in cart_products %}
-            <strong>{{ product.name }}</strong><br>
-            {% if product.is_sale %}
-              <strike>$ {{ product.price|currency_format }}</strike> &nbsp $ {{ product.sale_price|currency_format }}
-            {% else %}
-              $ {{ product.price|currency_format }}
-            {% endif %}
-            <br>
-            <small>Quantity:</small>
-            {% for key, value in quantities.items %}
-              {% if key == product.id|slugify %}
-                {{ value }}
+            <div class="mb-3 pb-3 border-bottom">
+              <strong>{{ product.name }}</strong><br>
+              {% if product.is_sale %}
+                <strike class="text-muted">$ {{ product.price|currency_format }}</strike> 
+                <span class="text-success">$ {{ product.sale_price|currency_format }}</span>
+              {% else %}
+                <span>$ {{ product.price|currency_format }}</span>
               {% endif %}
-            {% endfor %}
-            <br><br>
+              <br>
+              <small class="text-muted">Cantidad: 
+                {% for key, value in quantities.items %}
+                  {% if key == product.id|slugify %}
+                    {{ value }}
+                  {% endif %}
+                {% endfor %}
+              </small>
+            </div>
           {% endfor %}
-          <strong>Total: ${{ total|currency_format }}</strong>
-          <br><br>
-          <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary">Update Items</a>
+          
+          <hr class="my-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Total:</h5>
+            <h4 class="mb-0 text-success">$ {{ total|currency_format }}</h4>
+          </div>
+          
+          <br>
+          <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-pencil me-2"></i>Actualizar Items
+          </a>
         </div>
       </div>
     </div>
@@ -132,9 +166,11 @@
 <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="termsModalLabel">Términos y Condiciones</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="termsModalLabel">
+          <i class="bi bi-file-text me-2"></i>Términos y Condiciones
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <h6>1. Aceptación de los términos</h6>
@@ -168,14 +204,18 @@
         <p>Estos Términos y Condiciones se rigen por las leyes de la República de Chile. Cualquier disputa será resuelta en los tribunales competentes de Santiago, Chile.</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="acceptTermsBtn">Aceptar</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="acceptTermsBtn">
+          <i class="bi bi-check-circle me-2"></i>Aceptar
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- JavaScript para habilitar/deshabilitar el botón -->
+<!-- JavaScript -->
 <script>
   const termsCheckbox = document.getElementById('termsCheckbox');
   const payButton = document.getElementById('payButton');
@@ -201,7 +241,12 @@
     if (!termsCheckbox.checked) {
       e.preventDefault();
       alert('Debes aceptar los Términos y Condiciones para continuar.');
+      return false;
     }
+    
+    // Mostrar loading en el botón
+    payButton.disabled = true;
+    payButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
   });
 
   // Mostrar información según el método de pago seleccionado
@@ -211,49 +256,56 @@
   paymentMethods.forEach(method => {
     method.addEventListener('change', function() {
       if (this.value === 'webpay') {
-        paymentInfo.innerHTML = '<strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.';
+        paymentInfo.innerHTML = '<i class="bi bi-shield-check me-2"></i><strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.';
         paymentInfo.className = 'alert alert-info mt-3';
       } else if (this.value === 'transferencia') {
-        paymentInfo.innerHTML = '<strong>Transferencia Bancaria:</strong>Recibirás un email con los datos bancarios para realizar la transferencia.';
+        paymentInfo.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>Transferencia Bancaria:</strong> Recibirás un email con los datos bancarios para realizar la transferencia.';
         paymentInfo.className = 'alert alert-warning mt-3';
       }
-      // Aquí puedes agregar más métodos en el futuro
     });
   });
-
 </script>
 
 <style>
-  /* Solo para los labels de método de pago */
-  label.btn-outline-primary[for="webpay"],
-  label.btn-outline-primary[for="transferencia"] {
+  /* Estilos para los labels de método de pago */
+  label.btn-outline-payment {
     background-color: transparent;
     color: #212529;
     border-color: #dee2e6;
     border-width: 2px;
+    transition: all 0.3s ease;
   }
 
-  /* Hover - sin azul */
-  label.btn-outline-primary[for="webpay"]:hover,
-  label.btn-outline-primary[for="transferencia"]:hover {
+  /* Hover */
+  label.btn-outline-payment:hover {
     background-color: #f8f9fa;
     color: #212529;
-    border-color: #dee2e6;
+    border-color: #adb5bd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
 
-  /* Cuando está seleccionado: solo borde rojo */
-  .btn-check:checked + label.btn-outline-primary[for="webpay"],
-  .btn-check:checked + label.btn-outline-primary[for="transferencia"] {
-    background-color: transparent !important;
+  /* Seleccionado: borde rojo */
+  .btn-check:checked + label.btn-outline-payment {
+    background-color: #fff5f5 !important;
     color: #212529 !important;
     border-color: #dc3545 !important;
     border-width: 3px !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
   }
 
-  /* Focus - sin azul */
-  label.btn-outline-primary[for="webpay"]:focus,
-  label.btn-outline-primary[for="transferencia"]:focus {
-    box-shadow: none;
+  /* Focus */
+  label.btn-outline-payment:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+  }
+
+  /* Sticky sidebar */
+  @media (min-width: 992px) {
+    .sticky-top {
+      position: sticky;
+      top: 20px;
+      z-index: 100;
+    }
   }
 </style>
 

@@ -28,7 +28,7 @@
           <div class="row mb-3">
             <div class="col-md-6">
               <p class="mb-2"><strong>Número de Orden:</strong></p>
-              <h5 class="text-primary">#{{ order.id }}</h5>
+              <h5 class="text-primary">#{{ order.buy_order }}</h5>
             </div>
             <div class="col-md-6 text-md-end">
               <p class="mb-2"><strong>Fecha:</strong></p>
@@ -97,6 +97,11 @@
                 <tr>
                   <td>
                     <strong>{{ item.product.name }}</strong>
+                    {% if item.is_international %}
+                      <span class="badge bg-info text-white ms-2">
+                        <i class="bi bi-globe"></i> Internacional
+                      </span>
+                    {% endif %}
                   </td>
                   <td class="text-center">{{ item.quantity }}</td>
                   <td class="text-end">$ {{ item.price|currency_format }}</td>
@@ -115,6 +120,109 @@
         </div>
       </div>
 
+      <!-- Comprobante de Pago Transbank -->
+      {% if transaction %}
+      <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-credit-card me-2"></i>Comprobante de Pago
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- Columna izquierda -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Número de Orden de Compra</small>
+                <strong class="fs-6">{{ transaction.buy_order }}</strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Nombre del Comercio</small>
+                <strong>4x4MAX</strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Monto</small>
+                <strong class="text-success fs-5">
+                  $ {{ transaction.amount|floatformat:0 }} CLP
+                </strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Estado de la Transacción</small>
+                <span class="badge bg-success fs-6">
+                  <i class="bi bi-check-circle-fill me-1"></i>{{ transaction.status }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Columna derecha -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Código de Autorización</small>
+                <strong class="fs-6">{{ transaction.authorization_code }}</strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Fecha de Transacción</small>
+                <strong>{{ transaction.transaction_date }}</strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Tipo de Pago</small>
+                <strong>
+                  {{ transaction.payment_type }}
+                  {% if transaction.payment_type_code == 'VD' %}
+                    <i class="bi bi-credit-card text-primary"></i>
+                  {% elif transaction.payment_type_code == 'VN' or transaction.payment_type_code == 'VC' %}
+                    <i class="bi bi-credit-card-2-front text-warning"></i>
+                  {% endif %}
+                </strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Número de Cuotas</small>
+                <strong>
+                  {% if transaction.installments > 0 %}
+                    {{ transaction.installments }} cuota{% if transaction.installments > 1 %}s{% endif %}
+                  {% else %}
+                    Sin cuotas
+                  {% endif %}
+                </strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Tarjeta Utilizada</small>
+                <strong>**** **** **** {{ transaction.card_number }}</strong>
+              </div>
+            </div>
+          </div>
+          
+          <hr class="my-3">
+          
+          <!-- Descripción de bienes y servicios
+          <div class="mb-0">
+            <small class="text-muted d-block mb-2">Descripción de Bienes y/o Servicios</small>
+            <div class="bg-light p-3 rounded">
+              <strong>Repuestos y accesorios 4x4</strong>
+              <ul class="mb-0 mt-2 small">
+                {% for item in order_items %}
+                  <li>{{ item.product.name }} (x{{ item.quantity }})</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div> -->
+        </div>
+        <div class="card-footer bg-light text-muted text-center">
+          <small>
+            <i class="bi bi-shield-check me-1"></i>
+            Transacción procesada de forma segura por Transbank Webpay Plus
+          </small>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Próximos pasos -->
       <div class="card mb-4 border-info">
         <div class="card-header bg-info text-white">
@@ -130,7 +238,17 @@
             {% else %}
             <li class="mb-2">Recibirás tu pedido en la dirección indicada</li>
             {% endif %}
+            {% if order.has_international_items %}
+            <li class="mb-2">
+              <span class="badge bg-info">
+                <i class="bi bi-globe"></i> Productos Internacionales
+              </span>
+              <br>
+              <small class="text-muted">Los productos internacionales tienen un tiempo de entrega de 15-30 días hábiles y pueden llegar en envíos separados.</small>
+            </li>
+            {% else %}
             <li>Tiempo estimado de entrega: 3-5 días hábiles</li>
+            {% endif %}
           </ol>
         </div>
       </div>
