@@ -17,6 +17,10 @@ from transbank.webpay.webpay_plus.transaction import Transaction
 from django.conf import settings
 import os
 
+from django.urls import reverse
+
+
+
 TRANSBANK_COMMERCE_CODE = os.environ.get('TRANSBANK_COMMERCE_CODE')
 TRANSBANK_API_KEY = os.environ.get('TRANSBANK_API_KEY')
 
@@ -264,17 +268,6 @@ def checkout(request):
 
 
 
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.urls import reverse
-from django.conf import settings
-from cart.cart import Cart
-from payment.forms import PaymentForm
-from payment.models import Order
-from transbank.webpay.webpay_plus.transaction import Transaction
-import uuid
-
-
 def billing_info(request):
     """
     Vista unificada que:
@@ -395,46 +388,6 @@ def billing_info(request):
             "personal_info": personal_info,
         })
 
-# Eliminar si es que se usa billing info unificada
-def process_payment(request):
-    if request.method == 'POST':
-        # Obtener método de pago de la sesión
-        payment_method = request.session.get('payment_method', 'webpay')
-        
-        if payment_method == 'webpay':
-            cart = Cart(request)
-            total = int(cart.cart_total())
-
-            buy_order = str(uuid.uuid4()).replace('-', '')[:8]
-            session_id = str(uuid.uuid4())
-            return_url = request.build_absolute_uri('/payment/evaluate_payment')
-
-            tx = Transaction.build_for_integration(
-                settings.TRANSBANK_COMMERCE_CODE, 
-                settings.TRANSBANK_API_KEY
-            )
-
-            response = tx.create(buy_order, session_id, total, return_url)
-
-            token = response['token']
-            url = response['url']
-
-            # print(response, token, url)
-
-            return redirect(f"{url}?token_ws={token}")
-        
-        elif payment_method == 'transferencia':
-            # Lógica futura para transferencia bancaria
-            messages.info(request, "Transferencia bancaria próximamente disponible")
-            return redirect('billing_info')
-        
-        else:
-            messages.error(request, "Método de pago no válido")
-            return redirect('billing_info')
-    else:
-        messages.error(request, "Error processing payment.")
-        return redirect('payment_failed')
-
 
 def evaluate_payment(request):
     if request.GET:
@@ -453,10 +406,16 @@ def evaluate_payment(request):
                 except Order.DoesNotExist:
                     pass
             
-            messages.error(request, "La transacción fue cancelada o anulada.")
+            # NO LIMPIAR EL CARRITO - mantener los productos
+            # Limpiar solo las referencias de la orden
+            request.session.pop('buy_order', None)
+            request.session.pop('order_id', None)
+            
+            messages.warning(request, "Cancelaste el pago. Tus productos siguen en el carrito.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'cancelled',
-                'message': 'Cancelaste el pago en Transbank. Puedes intentar nuevamente cuando quieras.'
+                'message': 'Cancelaste el pago en Transbank. Tus productos siguen en el carrito y puedes intentar nuevamente.',
+                'show_cart_button': True  # ← Para mostrar botón "Volver al carrito"
             })
         
         # Flujo normal - pago exitoso o rechazado
@@ -474,7 +433,7 @@ def evaluate_payment(request):
             response = tx.commit(token)
 
             if response['status'] == 'AUTHORIZED':
-                # Pago exitoso - obtener orden existente
+                # ✅ PAGO EXITOSO
                 order_id = request.session.get('order_id')
                 buy_order = response.get('buy_order')
                 
@@ -500,6 +459,9 @@ def evaluate_payment(request):
                 
                 order_items = order.orderitem_set.all()
                 
+                # ✅ LIMPIAR CARRITO SOLO AQUÍ (PAGO EXITOSO)
+                clear_cart_and_session(request)
+                
                 # Enviar email de confirmación
                 try:
                     send_order_confirmation_email_async(order)
@@ -521,17 +483,13 @@ def evaluate_payment(request):
                     'status': response.get('status'),
                 }
                 
-                # Limpiar sesión
-                request.session.pop('buy_order', None)
-                request.session.pop('order_id', None)
-                
                 return render(request, "payment/payment_success.html", {
                     'order': order,
                     'order_items': order_items,
                     'transaction': transaction_data,
                 })
             else:
-                # Pago rechazado - eliminar orden
+                # ❌ PAGO RECHAZADO
                 order_id = request.session.get('order_id')
                 if order_id:
                     try:
@@ -540,11 +498,17 @@ def evaluate_payment(request):
                     except Order.DoesNotExist:
                         pass
                 
-                messages.error(request, f"El pago fue rechazado. Estado: {response.get('status')}")
+                # NO LIMPIAR EL CARRITO - mantener los productos
+                # Limpiar solo las referencias de la orden
+                request.session.pop('buy_order', None)
+                request.session.pop('order_id', None)
+                
+                messages.error(request, "Tu pago fue rechazado. Tus productos siguen en el carrito.")
                 return render(request, 'payment/payment_failed.html', {
                     'reason': 'rejected',
-                    'message': 'Tu pago fue rechazado. Por favor verifica tus datos e intenta nuevamente.',
-                    'status': response.get('status')
+                    'message': 'Tu pago fue rechazado por el banco. Por favor verifica tus datos e intenta nuevamente. Tus productos siguen en el carrito.',
+                    'status': response.get('status'),
+                    'show_cart_button': True  # ← Para mostrar botón "Volver al carrito"
                 })
                 
         except Exception as e:
@@ -561,10 +525,16 @@ def evaluate_payment(request):
                 except Order.DoesNotExist:
                     pass
             
-            messages.error(request, "Ocurrió un error al procesar el pago.")
+            # NO LIMPIAR EL CARRITO - mantener los productos
+            # Limpiar solo las referencias de la orden
+            request.session.pop('buy_order', None)
+            request.session.pop('order_id', None)
+            
+            messages.error(request, "Ocurrió un error al procesar el pago. Tus productos siguen en el carrito.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'error',
-                'message': 'Ocurrió un error técnico. Por favor intenta nuevamente o contacta con soporte.'
+                'message': 'Ocurrió un error técnico al procesar tu pago. Tus productos siguen en el carrito. Por favor intenta nuevamente o contacta con soporte.',
+                'show_cart_button': True  # ← Para mostrar botón "Volver al carrito"
             })
     
     messages.error(request, "Acceso inválido.")
@@ -600,11 +570,32 @@ def update_order_with_transaction(order, transaction_response):
     order.save()
 
 
+def clear_cart_and_session(request):
+    """
+    Limpia el carrito y la sesión después de un pago exitoso
+    """
+    # Limpiar sesión
+    request.session.pop('session_key', None)
+    request.session.pop('shipping_info', None)
+    request.session.pop('personal_info', None)
+    request.session.pop('guest_info', None)
+    request.session.pop('workshop_id', None)
+    request.session.pop('buy_order', None)
+    request.session.pop('order_id', None)
+
+    # Limpiar carrito del usuario autenticado
+    if request.user.is_authenticated:
+        current_user = Profile.objects.filter(user__id=request.user.id)
+        current_user.update(old_cart="")
+
+    # Limpiar session_key del carrito
+    for key in list(request.session.keys()):
+        if key == 'session_key':
+            del request.session[key]
+
+
 def create_order_from_session(request, transaction_response=None):
-    """
-    Crea la orden desde la sesión.
-    El buy_order se genera automáticamente en el método save() del modelo.
-    """
+
     cart = Cart(request)
     cart_products = cart.get_products()
     quantities = cart.get_quants()
@@ -660,8 +651,6 @@ def create_order_from_session(request, transaction_response=None):
     
     # Guardar - esto generará automáticamente el buy_order
     order.save()
-    
-    # Ahora order.buy_order está disponible (ej: "4X4-20241223-000001")
 
     # Crear los ítems de la orden
     for product in cart_products:
@@ -678,124 +667,8 @@ def create_order_from_session(request, transaction_response=None):
                 price=price,
                 is_international=is_international
             )
-
-    # Limpiar sesión y carrito
-    request.session.pop('session_key', None)
-    request.session.pop('shipping_info', None)
-    request.session.pop('personal_info', None)
-    request.session.pop('guest_info', None)
-    request.session.pop('workshop_id', None)
-
-    if user:
-        current_user = Profile.objects.filter(user__id=request.user.id)
-        current_user.update(old_cart="")
-
-    for key in list(request.session.keys()):
-        if key == 'session_key':
-            del request.session[key]
-
+    
     return order
-
-
-# Deberia eliminarse esta función si se usa create_order_from_session
-def process_order(request):
-    if request.POST:
-        # Get the cart
-        cart = Cart(request)
-        cart_products = cart.get_products()
-        quantities = cart.get_quants()
-        total = cart.cart_total()
-
-        # Get the billing info from the last page
-        # payment_form = PaymentForm(request.POST or None)
-
-        # get shipping session data
-        my_shipping = request.session.get('shipping_info')
-
-        # Gather Order info
-        full_name = my_shipping['shipping_full_name']
-        email = my_shipping['shipping_email']
-        phone = my_shipping['shipping_phone']
-
-        # Create shipping address from session info
-        shipping_address = f"{my_shipping['shipping_address1']}\n{my_shipping['shipping_address2']}\n{my_shipping['shipping_commune']}\n{my_shipping['shipping_city']}\n{my_shipping['shipping_state']}\n{my_shipping['shipping_zipcode']}\n{my_shipping['shipping_country']}"
-        amount_pay = total
-
-        if request.user.is_authenticated:
-            # logged in
-            user = request.user
-
-            # Create Order
-            create_order = Order(user=user, full_name=full_name, email=email, phone=phone, shipping_address=shipping_address, amount_pay=amount_pay)
-            create_order.save()
-
-            # Add Order Item
-            # Get the Order id
-            order_id = create_order.pk
-
-            # Get Product info
-            for product in cart_products:
-                product_id = product.id
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.price
-
-                # Get quantities
-                for key, value in quantities.items():
-                    if int(key) == product.id:
-                        # Create order item
-                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, user=user, quantity=value, price=price)
-                        create_order_item.save()
-
-            # Delete the cart
-            for key in list(request.session.keys()):
-                if key == 'session_key':
-                    del request.session[key]
-
-            # Delete Cart from database
-            current_user = Profile.objects.filter(user__id=request.user.id)
-            current_user.update(old_cart="")
-
-            messages.success(request, "Order Placed")
-            return redirect('home')
-
-        else:
-            # not logged in
-            # Create Order
-            create_order = Order(full_name=full_name, email=email, phone=phone, shipping_address=shipping_address, amount_pay=amount_pay)
-            create_order.save()
-
-            # Add Order Item
-            # Get the Order id
-            order_id = create_order.pk
-
-            # Get Product info
-            for product in cart_products:
-                product_id = product.id
-                if product.is_sale:
-                    price = product.sale_price
-                else:
-                    price = product.price
-
-                # Get quantities
-                for key, value in quantities.items():
-                    if int(key) == product.id:
-                        # Create order item
-                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, quantity=value, price=price)
-                        create_order_item.save()
-
-            # Delete the cart
-            for key in list(request.session.keys()):
-                if key == 'session_key':
-                    del request.session[key]
-
-            messages.success(request, "Order Placed")
-            return redirect('home')
-
-    else:
-        messages.success(request, "Access Denied.")
-        return redirect('home')
 
 
 def not_shipped_dash(request):

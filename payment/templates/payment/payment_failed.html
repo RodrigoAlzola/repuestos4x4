@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block content %}
 <!-- Header -->
@@ -6,9 +7,17 @@
   <div class="container px-4 px-lg-5 my-5">
     <div class="text-center text-white">
       <h1 class="display-4 fw-bolder">
-        <i class="bi bi-x-circle-fill me-3"></i>Pago No Completado
+        <i class="bi bi-x-circle-fill me-3"></i>Pago No Procesado
       </h1>
-      <p class="lead fw-normal mb-0">Tu orden no pudo ser procesada</p>
+      <p class="lead fw-normal mb-0">
+        {% if reason == 'cancelled' %}
+          Tu pago fue cancelado
+        {% elif reason == 'rejected' %}
+          Tu pago fue rechazado
+        {% else %}
+          Hubo un problema con el pago
+        {% endif %}
+      </p>
     </div>
   </div>
 </header>
@@ -18,72 +27,114 @@
   <div class="row justify-content-center">
     <div class="col-lg-8">
       
-      <!-- Mensaje según el tipo de fallo -->
+      <!-- Mensaje principal -->
       <div class="card mb-4 border-danger">
-        <div class="card-body text-center py-5">
-          
-          {% if reason == 'cancelled' %}
-            <i class="bi bi-x-octagon text-warning" style="font-size: 4rem;"></i>
-            <h3 class="mt-3">Transacción Cancelada</h3>
-            <p class="text-muted">{{ message }}</p>
-          
-          {% elif reason == 'rejected' %}
-            <i class="bi bi-credit-card-2-back text-danger" style="font-size: 4rem;"></i>
-            <h3 class="mt-3">Pago Rechazado</h3>
-            <p class="text-muted">{{ message }}</p>
-            {% if status %}
-            <p class="text-muted"><small>Estado: {{ status }}</small></p>
+        <div class="card-header bg-danger text-white">
+          <h4 class="mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {% if reason == 'cancelled' %}
+              Transacción Cancelada
+            {% elif reason == 'rejected' %}
+              Pago Rechazado
+            {% else %}
+              Error en el Pago
             {% endif %}
+          </h4>
+        </div>
+        <div class="card-body">
+          <p class="lead">{{ message }}</p>
           
-          {% else %}
-            <i class="bi bi-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
-            <h3 class="mt-3">Error en el Pago</h3>
-            <p class="text-muted">{{ message|default:"Hubo un problema al procesar tu pago." }}</p>
+          {% if status %}
+            <div class="alert alert-light">
+              <strong>Estado de la transacción:</strong> {{ status }}
+            </div>
           {% endif %}
           
+          <hr class="my-4">
+          
+          <div class="alert alert-success">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Buenas noticias:</strong> Tus productos siguen en el carrito. No has perdido nada.
+          </div>
         </div>
       </div>
 
-      <!-- Qué hacer ahora -->
-      <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>¿Qué puedes hacer?</h5>
+      <!-- Posibles razones -->
+      {% if reason == 'rejected' %}
+      <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning">
+          <h5 class="mb-0">
+            <i class="bi bi-lightbulb me-2"></i>Posibles causas del rechazo
+          </h5>
         </div>
         <div class="card-body">
           <ul class="mb-0">
-            {% if reason == 'cancelled' %}
-              <li>Volver al carrito y continuar con el proceso de pago</li>
-              <li>Revisar los productos en tu carrito antes de pagar</li>
-            {% elif reason == 'rejected' %}
-              <li>Verificar que los datos de tu tarjeta sean correctos</li>
-              <li>Asegurarte de tener fondos suficientes</li>
-              <li>Intentar con otra tarjeta</li>
-              <li>Contactar a tu banco si el problema persiste</li>
-            {% else %}
-              <li>Intentar el pago nuevamente</li>
-              <li>Verificar tu conexión a internet</li>
-              <li>Contactar con nuestro soporte si el problema continúa</li>
-            {% endif %}
+            <li>Fondos insuficientes en tu cuenta</li>
+            <li>Tarjeta vencida o bloqueada</li>
+            <li>Límite de compra diario excedido</li>
+            <li>Datos de tarjeta incorrectos</li>
+            <li>Problemas de conexión con tu banco</li>
           </ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Próximos pasos -->
+      <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>¿Qué puedo hacer ahora?
+          </h5>
+        </div>
+        <div class="card-body">
+          <ol class="mb-0">
+            {% if reason == 'rejected' %}
+              <li class="mb-2">Verifica que tu tarjeta tenga fondos suficientes</li>
+              <li class="mb-2">Asegúrate de que tu tarjeta esté activa y no vencida</li>
+              <li class="mb-2">Contacta con tu banco si el problema persiste</li>
+              <li class="mb-2">Intenta con otra tarjeta o método de pago</li>
+            {% elif reason == 'cancelled' %}
+              <li class="mb-2">Puedes volver al carrito e intentar nuevamente</li>
+              <li class="mb-2">Si tienes dudas, contáctanos antes de pagar</li>
+            {% else %}
+              <li class="mb-2">Intenta nuevamente en unos minutos</li>
+              <li class="mb-2">Si el problema persiste, contáctanos</li>
+            {% endif %}
+            <li>Tus productos están seguros en tu carrito</li>
+          </ol>
         </div>
       </div>
 
       <!-- Botones de acción -->
       <div class="text-center mb-5">
-        <a href="{% url 'cart_summary' %}" class="btn btn-primary btn-lg me-2">
-          <i class="bi bi-cart-fill me-2"></i>Volver al Carrito
+        {% if show_cart_button %}
+          <a href="{% url 'cart_summary' %}" class="btn btn-success btn-lg me-2">
+            <i class="bi bi-cart-check me-2"></i>Volver al Carrito
+          </a>
+        {% endif %}
+        
+        <a href="{% url 'checkout' %}" class="btn btn-primary btn-lg me-2">
+          <i class="bi bi-arrow-clockwise me-2"></i>Intentar Nuevamente
         </a>
+        
         <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-lg">
-          <i class="bi bi-house-fill me-2"></i>Ir al Inicio
+          <i class="bi bi-house-fill me-2"></i>Volver al Inicio
         </a>
       </div>
 
-      <!-- Info de contacto -->
-      <div class="alert alert-light text-center">
-        <p class="mb-0">
-          <strong>¿Necesitas ayuda?</strong><br>
-          Contáctanos en <a href="mailto:soporte@4x4max.cl">soporte@4x4max.cl</a>
-        </p>
+      <!-- Información de contacto -->
+      <div class="card border-secondary">
+        <div class="card-body text-center">
+          <h6 class="mb-3">¿Necesitas ayuda?</h6>
+          <p class="mb-2">
+            <i class="bi bi-envelope me-2"></i>
+            <a href="mailto:soporte@4x4max.cl">soporte@4x4max.cl</a>
+          </p>
+          <p class="mb-0">
+            <i class="bi bi-telephone me-2"></i>
+            <a href="tel:+56912345678">+569 1234 5678</a>
+          </p>
+        </div>
       </div>
 
     </div>
