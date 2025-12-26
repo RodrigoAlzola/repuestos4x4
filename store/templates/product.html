@@ -20,30 +20,45 @@
             </button>
           </div>
 
-          <p class="card-text">{{ product.description }}</p>
-
+          <!--<p class="card-text">{{ product.description }}</p> -->
+          <br/><br/>
           <ul class="list-group list-group-flush">
             {% if product.motor %}
               <li class="list-group-item"><strong>Motor:</strong> {{ product.motor }}</li>
             {% endif %}
-            <li class="list-group-item"><strong>Weight (kg):</strong> {{ product.weight_kg }}</li>
-            <li class="list-group-item"><strong>Dimensions (cm):</strong> {{ product.length_cm }} x {{ product.width_cm }} x {{ product.height_cm }}</li>
-            <li class="list-group-item"><strong>Volume (m³):</strong> {{ product.volume_m3 }}</li>
+            <li class="list-group-item"><strong>Peso (kg):</strong> {{ product.weight_kg }}</li>
+            <li class="list-group-item"><strong>Dimensiones (cm):</strong> {{ product.length_cm }} x {{ product.width_cm }} x {{ product.height_cm }}</li>
+            <li class="list-group-item"><strong>Volumen (m³):</strong> {{ product.volume_m3 }}</li>
             
             <!-- Stock con indicador de tipo -->
             {% if product.stock > 0 %}
               <li class="list-group-item">
                 <strong>Stock:</strong> 
-                <span class="badge bg-success">{{ product.stock }} disponibles</span>
-              <!--  <small class="text-muted ms-2">Entrega inmediata</small> -->
+                {% if product.stock > 30 %}
+                  <span class="badge bg-warning">+30 disponibles
+                    <span class="text ms-2">Entrega inmediata</span>
+                  </span>
+                {% else %}
+                  <span class="badge bg-warning">{{ product.stock }} disponibles
+                    <span class="text ms-2">Entrega inmediata</span>
+                  </span>
+                {% endif %}
+                <br>
+                <small class="text-muted">Tiempo de entrega: 5-10 días hábiles</small>
               </li>
+
             {% elif product.stock_international > 0 %}
               <li class="list-group-item">
                 <strong>Stock:</strong> 
-                <span class="badge bg-info">{{ product.stock_international }} disponibles</span>
-                <span class="badge bg-warning text-dark ms-2">
-                  <i class="bi bi-globe"></i> Compra Internacional
-                </span>
+                {% if product.stock_international > 30 %}
+                  <span class="badge bg-info">+30 disponibles
+                    <i class="bi bi-globe ms-2"></i> Compra Internacional
+                  </span>
+                {% else %}
+                  <span class="badge bg-info">{{ product.stock_international }} disponibles
+                    <i class="bi bi-globe ms-2"></i> Compra Internacional
+                  </span>
+                {% endif %}
                 <br>
                 <small class="text-muted">Tiempo de entrega: 15-30 días hábiles</small>
               </li>

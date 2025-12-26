@@ -63,17 +63,40 @@
                         
                         <!-- Stock info -->
                         {% if product.is_international_item %}
-                        <div class="alert alert-warning py-2 mb-3">
-                            <small>
-                                <i class="bi bi-clock me-1"></i>
-                                <strong>Compra Internacional:</strong> Stock disponible: {{ product.stock_international }}
-                            </small>
-                        </div>
+                            {% if product.stock_international > 30 %}
+                                <div class="alert alert-info py-2 mb-3 d-inline-block">
+                                    <small>
+                                        <i class="bi bi-clock me-1"></i>
+                                        <strong>Compra Internacional:</strong> Stock disponible: +30 
+                                    </small>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info py-2 mb-3 d-inline-block">
+                                    <small>
+                                        <i class="bi bi-clock me-1"></i>
+                                        <strong>Compra Internacional:</strong> Stock disponible: {{ product.stock_international }} 
+                                    </small>
+                                </div>
+                            {% endif %}
+
                         {% else %}
-                        <small class="text-muted">
-                            <i class="bi bi-check-circle text-success me-1"></i>
-                            Stock local: {{ product.stock }} disponibles
-                        </small>
+                            {% if product.stock > 30 %}
+                                <div class="alert alert-warning py-2 mb-3 d-inline-block">
+                                    <small>
+                                        <i class="bi bi-clock me-1"></i>
+                                        <strong>Compra Nacional:</strong> Stock disponible: +30 
+                                    </small>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning py-2 mb-3 d-inline-block">
+                                    <small>
+                                        <i class="bi bi-clock me-1"></i>
+                                        <strong>Compra Nacional:</strong> Stock disponible: {{ product.stock }} 
+                                    </small>
+                                </div>
+                            {% endif %}
+
+
                         <br/><br/>
                         {% endif %}
                         

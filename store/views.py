@@ -317,9 +317,9 @@ def product(request, pk):
     quantity_range_international = None
     
     if product.stock > 0:
-        quantity_range = range(1, min(product.stock + 1, 11))  # Máximo 10 o el stock disponible
+        quantity_range = range(1, min(product.stock + 1, 101))  # Máximo 10 o el stock disponible
     elif product.stock_international > 0:
-        quantity_range_international = range(1, min(product.stock_international + 1, 11))
+        quantity_range_international = range(1, min(product.stock_international + 1, 101))
 
     return render(request, 'product.html', {
         'product': product,
@@ -330,6 +330,7 @@ def product(request, pk):
         'selected_model': selected_model,
         'selected_serie': selected_serie,
     })
+
 
 def category(request, foo):
     foo = foo.replace('-', ' ')

@@ -86,7 +86,7 @@ def send_order_confirmation_email(order):
     """Envía email de confirmación de compra"""
     logger.info(f"[ORDER EMAIL] Iniciando envío para orden #{order.id}")
     
-    subject = f'Confirmación de Orden #{order.id} - 4x4MAX'
+    subject = f'Confirmación de Orden #{order.buy_order} - 4x4MAX'
     
     # Obtener items de la orden
     items = order.orderitem_set.all()
@@ -114,7 +114,7 @@ def send_order_confirmation_email(order):
         delivery_message = """
         <div style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;">
             <strong>⚠️ Orden Mixta (Local + Internacional):</strong><br>
-            • Los productos locales llegarán en 3-5 días hábiles<br>
+            • Los productos locales llegarán en 5-10 días hábiles<br>
             • Los productos internacionales llegarán en 15-30 días hábiles<br>
             Recibirás notificaciones separadas para cada envío.
         </div>
@@ -131,7 +131,7 @@ def send_order_confirmation_email(order):
         delivery_message = """
         <div style="background-color: #d4edda; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;">
             <strong>✓ Envío Local:</strong><br>
-            Tiempo estimado de entrega: <strong>3-5 días hábiles</strong>
+            Tiempo estimado de entrega: <strong>5-10 días hábiles</strong>
         </div>
         """
     

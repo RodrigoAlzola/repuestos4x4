@@ -11,6 +11,9 @@ def cart_summary(request):
     quantities = cart.get_quants()
     international_status = cart.get_international_status()  # Nuevo
     total = cart.cart_total()
+
+    # Límite máximo por producto
+    MAX_QUANTITY = 100
     
     # Agregar rango de stock para cada producto
     products_with_stock = []
@@ -19,12 +22,17 @@ def cart_summary(request):
         is_international = international_status.get(str(product.id), False)
         
         if is_international:
-            product.stock_range = range(1, product.stock_international + 1)
+            # Limitar al menor entre stock disponible y máximo permitido
+            max_available = min(product.stock_international, MAX_QUANTITY)
+            product.stock_range = range(1, max_available + 1)
             product.is_international_item = True
         else:
-            product.stock_range = range(1, product.stock + 1)
+            # Limitar al menor entre stock disponible y máximo permitido
+            max_available = min(product.stock, MAX_QUANTITY)
+            product.stock_range = range(1, max_available + 1)
             product.is_international_item = False
             
+        product.max_quantity = max_available  # Para usar en el template
         products_with_stock.append(product)
     
     return render(request, "cart_summary.html", {
