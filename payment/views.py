@@ -432,10 +432,18 @@ def evaluate_payment(request):
             return redirect('cart_summary')
 
         try:
-            tx = Transaction.build_for_integration(
+            # Desarrollo
+            #tx = Transaction.build_for_integration(
+            #    settings.TRANSBANK_COMMERCE_CODE, 
+            #    settings.TRANSBANK_API_KEY
+            #)
+
+            # Producción
+            tx = Transaction.build_for_production(
                 settings.TRANSBANK_COMMERCE_CODE, 
                 settings.TRANSBANK_API_KEY
             )
+
             response = tx.commit(token)
 
             if response['status'] == 'AUTHORIZED':
