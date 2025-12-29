@@ -324,8 +324,14 @@ def billing_info(request):
         
         if payment_method == 'webpay':
             try:
-                # Inicializar transacción Transbank
-                tx = Transaction.build_for_integration(
+                # Desarrollo
+                # tx = Transaction.build_for_integration(
+                #    settings.TRANSBANK_COMMERCE_CODE,
+                #    settings.TRANSBANK_API_KEY
+                # )
+
+                # Producción
+                tx = Transaction.build_for_production(
                     settings.TRANSBANK_COMMERCE_CODE,
                     settings.TRANSBANK_API_KEY
                 )
@@ -530,7 +536,7 @@ def evaluate_payment(request):
             request.session.pop('buy_order', None)
             request.session.pop('order_id', None)
             
-            messages.error(request, "Ocurrió un error al procesar el pago. Tus productos siguen en el carrito.")
+            # messages.error(request, "Ocurrió un error al procesar el pago. Tus productos siguen en el carrito.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'error',
                 'message': 'Ocurrió un error técnico al procesar tu pago. Tus productos siguen en el carrito. Por favor intenta nuevamente o contacta con soporte.',

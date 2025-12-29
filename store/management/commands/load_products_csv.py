@@ -8,7 +8,7 @@ from datetime import timedelta
 
 
 def convertion(value):
-    tarif = 1.19
+    tarif = 1.23
     return math.ceil(value*tarif/100)*100
 
 def verify_image_url(url, default_url="https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"):
@@ -205,7 +205,6 @@ class Command(BaseCommand):
                         product.price = price
                         product.category = category
                         product.description = description
-                        product.image = image
                         product.stock = stock
                         product.stock_international = stock_international
                         product.tariff_code = tariff_code
@@ -216,6 +215,10 @@ class Command(BaseCommand):
                         product.volume_m3 = volume
                         product.motor = motor
                         product.provider = provider
+
+                        if not skip_image_check:
+                            product.image = image
+
                         product.save()
                         actualizados += 1
                     else:
