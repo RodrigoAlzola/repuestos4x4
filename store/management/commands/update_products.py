@@ -9,9 +9,19 @@ from django.db.models import F
 
 
 def convertion(value):
-    """Convierte precio aplicando tarifa del 19% y redondea"""
-    tarif = 1.23
-    return math.ceil(value * tarif / 100) * 100
+    """
+    Convierte precio aplicando tarifa del 0% y redondea a .0 o .5
+    """
+    tarif = 1.00 #1.19
+
+    # Aplicar tarifa y dividir por 1000 para generar decimales
+    precio_base = value * tarif / 1000
+    
+    # Redondear a .0 o .5
+    precio_redondeado = math.floor(precio_base * 2) / 2
+    
+    # Multiplicar de vuelta por 1000
+    return precio_redondeado * 1000
 
 
 def verify_image_url(url, default_url="https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"):

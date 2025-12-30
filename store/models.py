@@ -74,6 +74,7 @@ class Product(models.Model):
     part_number = models.CharField(max_length=50, default='', blank=True, null=True)
     price = models.DecimalField(default=0, decimal_places=2, max_digits=10)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, default=1)
+    subcategory = models.CharField(max_length=100, default='', blank=True, null=True)
     description = models.CharField(max_length=250, default='', blank=True, null=True)
     image = models.URLField(max_length=500, blank=True, null=True) # models.ImageField(upload_to='uploads/product/')
     is_sale = models.BooleanField(default=False)
@@ -88,6 +89,7 @@ class Product(models.Model):
     stock_international = models.IntegerField(default=0)
     tariff_code = models.CharField(max_length=50, default='', blank=True, null=True)
     provider = models.ForeignKey(Provider, on_delete=models.CASCADE, null=True, blank=True)
+    recommended_quantities = models.CharField(max_length=200, default='', blank=True, null=True)
 
     def __str__(self):
         return f"{self.part_number} - {self.name}"
