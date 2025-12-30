@@ -20,9 +20,7 @@ import os
 from django.urls import reverse
 
 
-
-TRANSBANK_COMMERCE_CODE = os.environ.get('TRANSBANK_COMMERCE_CODE')
-TRANSBANK_API_KEY = os.environ.get('TRANSBANK_API_KEY')
+env = os.getenv('DJANGO_SETTINGS_MODULE', '')
 
 
 def checkout(request):
@@ -325,17 +323,19 @@ def billing_info(request):
         if payment_method == 'webpay':
             try:
                 # Desarrollo
-                # tx = Transaction.build_for_integration(
-                #    settings.TRANSBANK_COMMERCE_CODE,
-                #    settings.TRANSBANK_API_KEY
-                # )
+                if 'dev' in env:
+                    tx = Transaction.build_for_integration(
+                        settings.TRANSBANK_COMMERCE_CODE,
+                        settings.TRANSBANK_API_KEY
+                    )
 
                 # Producción
-                tx = Transaction.build_for_production(
-                    settings.TRANSBANK_COMMERCE_CODE,
-                    settings.TRANSBANK_API_KEY
-                )
-
+                elif 'prod' in env:
+                    tx = Transaction.build_for_production(
+                        settings.TRANSBANK_COMMERCE_CODE,
+                        settings.TRANSBANK_API_KEY
+                    )
+            
                 # Crear transacción con el buy_order de la orden
                 response = tx.create(
                     buy_order=order.buy_order,  # ← Usar buy_order generado
@@ -433,16 +433,18 @@ def evaluate_payment(request):
 
         try:
             # Desarrollo
-            #tx = Transaction.build_for_integration(
-            #    settings.TRANSBANK_COMMERCE_CODE, 
-            #    settings.TRANSBANK_API_KEY
-            #)
+            if 'dev' in env:
+                    tx = Transaction.build_for_integration(
+                        settings.TRANSBANK_COMMERCE_CODE,
+                        settings.TRANSBANK_API_KEY
+                    )
 
-            # Producción
-            tx = Transaction.build_for_production(
-                settings.TRANSBANK_COMMERCE_CODE, 
-                settings.TRANSBANK_API_KEY
-            )
+                    # Producción
+            elif 'prod' in env:
+                    tx = Transaction.build_for_production(
+                        settings.TRANSBANK_COMMERCE_CODE,
+                        settings.TRANSBANK_API_KEY
+                    )
 
             response = tx.commit(token)
 
