@@ -13,7 +13,7 @@ def cart_summary(request):
     total = cart.cart_total()
 
     # Límite máximo por producto
-    MAX_QUANTITY = 100
+    MAX_QUANTITY = 10
     
     # Agregar rango de stock para cada producto
     products_with_stock = []

@@ -317,9 +317,9 @@ def product(request, pk):
     quantity_range_international = None
     
     if product.stock > 0:
-        quantity_range = range(1, min(product.stock + 1, 101))  # Máximo 10 o el stock disponible
+        quantity_range = range(1, min(product.stock + 1, 11))  # Máximo 10 o el stock disponible
     elif product.stock_international > 0:
-        quantity_range_international = range(1, min(product.stock_international + 1, 101))
+        quantity_range_international = range(1, min(product.stock_international + 1, 11))
 
     return render(request, 'product.html', {
         'product': product,
@@ -348,6 +348,7 @@ def category(request, foo):
 def all_products(request):
     # Filtros desde GET
     selected_category = request.GET.get('category')
+    selected_subcategory = request.GET.get('subcategory')
     selected_brand = request.GET.get('brand')
     selected_model = request.GET.get('model')
     selected_serie = request.GET.get('serie')
@@ -367,6 +368,9 @@ def all_products(request):
     if selected_category:
         products = products.filter(category__name=selected_category)
 
+    if selected_subcategory:
+        products = products.filter(subcategory=selected_subcategory)
+
     if selected_brand:
         products = products.filter(compatibilities__brand=selected_brand)
 
@@ -385,6 +389,29 @@ def all_products(request):
 
     # Datos para filtros (únicos y ordenados) - VERSIÓN OPTIMIZADA
     categories = Category.objects.all().order_by('name')
+
+    # Obtener subcategorías según la categoría seleccionada
+    if selected_category:
+        # Subcategorías solo de la categoría seleccionada
+        subcategories = (
+            Product.objects
+            .filter(category__name=selected_category)
+            .exclude(subcategory__isnull=True)
+            .exclude(subcategory='')
+            .values_list('subcategory', flat=True)
+            .distinct()
+            .order_by('subcategory')
+        )
+    else:
+        # Todas las subcategorías si no hay categoría seleccionada
+        subcategories = (
+            Product.objects
+            .exclude(subcategory__isnull=True)
+            .exclude(subcategory='')
+            .values_list('subcategory', flat=True)
+            .distinct()
+            .order_by('subcategory')
+        )
     
     # Construir compat_data con valores únicos y ordenados (más eficiente)
     compat_data = {}
@@ -414,8 +441,10 @@ def all_products(request):
     return render(request, 'all_products.html', {
         'page_obj': page_obj,
         'categories': categories,
+        'subcategories': subcategories,
         'compat_data': compat_data,
         'selected_category': selected_category,
+        'selected_subcategory': selected_subcategory,
         'selected_brand': selected_brand,
         'selected_model': selected_model,
         'selected_serie': selected_serie,

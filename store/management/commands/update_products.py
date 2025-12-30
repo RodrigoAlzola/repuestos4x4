@@ -116,6 +116,10 @@ class Command(BaseCommand):
                 product.price = convertion(float(row["Minorista"]))
                 product.stock = int(row["BR SOH"]) if pd.notna(row["BR SOH"]) else 0
                 product.stock_international = int(row["MELSOH"]) if pd.notna(row["MELSOH"]) else 0
+
+                # Por esta vez actualizar subcatory y recomended_auantities
+                product.subcategory = row['Subgrupo'] if pd.notna(row['Subgrupo']) else ''
+                product.recommended_quantities = row['Cant'] if pd.notna(row['Cant']) else ''
                 
                 products_to_update.append(product)
 
@@ -135,7 +139,7 @@ class Command(BaseCommand):
         if products_to_update:
             Product.objects.bulk_update(
                 products_to_update, 
-                ['price', 'stock', 'stock_international'],
+                ['price', 'stock', 'stock_international', 'subcategory', 'recommended_quantities'],
                 batch_size=500  # Procesa en lotes de 500
             )
             

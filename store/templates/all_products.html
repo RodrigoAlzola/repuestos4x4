@@ -17,13 +17,22 @@
     <div class="col-md-3">
       <form method="get" id="filter-form">
         <h5>Buscar productos</h5>
-  <input type="text" name="search" class="form-control mb-3" placeholder="Buscar por nombre o descripción" value="{{ search_query }}">
+        <input type="text" name="search" class="form-control mb-3" placeholder="Buscar por nombre o descripción" value="{{ search_query }}">
 
         <h5>Filtrar por categoría</h5>
-        <select name="category" class="form-select mb-3">
+        <select name="category" id="category-select" class="form-select mb-2">
           <option value="">-- Todas --</option>
           {% for cat in categories %}
             <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Nuevo: Filtro de subcategoría -->
+        <label>Subcategoría:</label>
+        <select name="subcategory" id="subcategory-select" class="form-select mb-3" {% if not selected_category %}disabled{% endif %}>
+          <option value="">-- Todas --</option>
+          {% for subcat in subcategories %}
+            <option value="{{ subcat }}" {% if selected_subcategory == subcat %}selected{% endif %}>{{ subcat }}</option>
           {% endfor %}
         </select>
 
@@ -110,10 +119,68 @@
 <!-- Script para filtros en cascada -->
 <script>
   const compatData = {{ compat_data|safe }};
+  
+  // Selects de compatibilidad
   const brandSelect = document.getElementById('brand-select');
   const modelSelect = document.getElementById('model-select');
   const serieSelect = document.getElementById('serie-select');
+  
+  // Nuevos selects de categoría/subcategoría
+  const categorySelect = document.getElementById('category-select');
+  const subcategorySelect = document.getElementById('subcategory-select');
 
+  // ===== FUNCIONALIDAD DE CATEGORÍA/SUBCATEGORÍA =====
+  // Datos de subcategorías por categoría (generados desde Django)
+  const subcategoryData = {};
+  
+  {% for cat in categories %}
+    subcategoryData["{{ cat.name }}"] = [
+      {% for subcat in subcategories %}
+        "{{ subcat }}",
+      {% endfor %}
+    ];
+  {% endfor %}
+
+  // Evento: Al cambiar categoría, habilitar/deshabilitar subcategoría
+  categorySelect.addEventListener('change', function() {
+    const selectedCategory = this.value;
+    
+    if (selectedCategory) {
+      // Habilitar subcategoría y hacer fetch de subcategorías
+      subcategorySelect.disabled = false;
+      
+      // Hacer una petición AJAX para obtener subcategorías dinámicamente
+      fetch(`?category=${selectedCategory}`, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.text())
+      .then(html => {
+        // Extraer subcategorías del HTML de respuesta
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newSubcategories = doc.querySelectorAll('#subcategory-select option');
+        
+        // Limpiar y repoblar
+        subcategorySelect.innerHTML = '<option value="">-- Todas --</option>';
+        newSubcategories.forEach(option => {
+          if (option.value) {
+            subcategorySelect.appendChild(option.cloneNode(true));
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Error cargando subcategorías:', error);
+      });
+    } else {
+      // Deshabilitar y limpiar subcategoría
+      subcategorySelect.disabled = true;
+      subcategorySelect.innerHTML = '<option value="">-- Todas --</option>';
+    }
+  });
+
+  // ===== FUNCIONALIDAD DE COMPATIBILIDAD (EXISTENTE) =====
   // Cargar marcas
   for (const brand in compatData) {
     const option = document.createElement('option');
