@@ -104,6 +104,7 @@ class Command(BaseCommand):
         # Crear un diccionario para búsqueda O(1) en lugar de queries O(n)
         products_dict = {p.part_number: p for p in Product.objects.filter(provider=provider)}
 
+        products_not_found = []
         products_to_update = []
         n = 0
         for index, row in df_nuevos_unique.iterrows():
@@ -125,7 +126,8 @@ class Command(BaseCommand):
 
                 if part_number == "90116-08325K":
                     self.stdout.write(f"Debug: Actualizando {part_number} - Precio: {product.price}, Stock Local: {row['BR SOH']}, Stock Internacional: {product.stock_international}")
-
+            else:
+                products_not_found.append(part_number)
                 
             # Progress indicator cada 50 filas
             if n % 500 == 0:
@@ -152,4 +154,6 @@ class Command(BaseCommand):
             f'✅ ACTUALIZACIÓN COMPLETADA\n'
             f'{"="*70}\n'
             f'⏱️  Tiempo total: {timedelta(seconds=int(total_time))} ({total_time:.2f} segundos)\n'
+            f'{"="*70}\n'
+            f'Productos no encontrado: {len(products_not_found)}\n'
         ))

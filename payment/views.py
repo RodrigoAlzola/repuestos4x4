@@ -299,36 +299,28 @@ def billing_info(request):
                 "personal_info": personal_info,
             })
 
-        # ===== CREAR LA ORDEN PRIMERO =====
-        try:
-            order = create_order_from_session(request)
-            # order.buy_order ya está generado automáticamente (ej: "4X4-20241223-000001")
-            
-        except Exception as e:
-            print(f"Error creando orden: {e}")
-            import traceback
-            traceback.print_exc()
-            messages.error(request, "Error al crear la orden. Intenta nuevamente.")
-            return render(request, "payment/billing_info.html", {
-                "cart_products": cart_products,
-                "quantities": quantities,
-                "total": total,
-                "shipping_info": shipping_info,
-                "personal_info": personal_info,
-            })
+        # ===== NO CREAR LA ORDEN AÚN - Solo generar buy_order =====
+        from datetime import datetime
+        import uuid
+        
+        # Generar un buy_order único
+        timestamp = datetime.now().strftime('%Y%m%d')
+        unique_id = str(uuid.uuid4())[:8].upper()
+        buy_order = f"4X4-{timestamp}-{unique_id}"
 
         # ===== PROCESAR PAGO CON TRANSBANK =====
         payment_method = request.POST.get('payment_method', 'webpay')
         
         if payment_method == 'webpay':
             try:
+                env = os.getenv('DJANGO_SETTINGS_MODULE', '')
+                
                 # Desarrollo
                 if 'dev' in env:
                     tx = Transaction.build_for_integration(
                         settings.TRANSBANK_COMMERCE_CODE,
                         settings.TRANSBANK_API_KEY
                     )
-
                 # Producción
                 elif 'prod' in env:
                     tx = Transaction.build_for_production(
@@ -336,21 +328,17 @@ def billing_info(request):
                         settings.TRANSBANK_API_KEY
                     )
             
-                # Crear transacción con el buy_order de la orden
+                # Crear transacción SIN crear la orden todavía
                 response = tx.create(
-                    buy_order=order.buy_order,  # ← Usar buy_order generado
-                    session_id=str(order.id),   # ← Session ID = Order ID
+                    buy_order=buy_order,
+                    session_id=request.session.session_key,
                     amount=int(total),
                     return_url=request.build_absolute_uri(reverse('evaluate_payment'))
                 )
 
-                # Guardar session_id en la orden
-                order.session_id = str(order.id)
-                order.save(update_fields=['session_id'])
-
-                # Guardar en sesión para referencia
-                request.session['buy_order'] = order.buy_order
-                request.session['order_id'] = order.id
+                # Guardar en sesión para crear la orden DESPUÉS del pago
+                request.session['pending_buy_order'] = buy_order
+                request.session['pending_payment'] = True
 
                 # Redirigir a Transbank
                 token = response['token']
@@ -363,9 +351,6 @@ def billing_info(request):
                 import traceback
                 traceback.print_exc()
                 
-                # Si falla Transbank, eliminar la orden creada
-                order.delete()
-                
                 messages.error(request, "Error al iniciar el pago con Transbank. Intenta nuevamente.")
                 return render(request, "payment/billing_info.html", {
                     "cart_products": cart_products,
@@ -376,7 +361,6 @@ def billing_info(request):
                 })
         
         elif payment_method == 'transferencia':
-            # Lógica futura para transferencia bancaria
             messages.info(request, "Transferencia bancaria próximamente disponible.")
             return redirect('billing_info')
         
@@ -403,25 +387,16 @@ def evaluate_payment(request):
         tbk_id_sesion = request.GET.get('TBK_ID_SESION')
         
         if tbk_token or tbk_orden_compra or tbk_id_sesion:
-            # Usuario canceló - eliminar orden si existe
-            order_id = request.session.get('order_id')
-            if order_id:
-                try:
-                    order = Order.objects.get(id=order_id)
-                    order.delete()
-                except Order.DoesNotExist:
-                    pass
+            # Usuario canceló - NO hay orden creada aún, solo limpiar sesión
+            request.session.pop('pending_buy_order', None)
+            request.session.pop('pending_payment', None)
             
             # NO LIMPIAR EL CARRITO - mantener los productos
-            # Limpiar solo las referencias de la orden
-            request.session.pop('buy_order', None)
-            request.session.pop('order_id', None)
-            
             messages.warning(request, "Cancelaste el pago. Tus productos siguen en el carrito.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'cancelled',
                 'message': 'Cancelaste el pago en Transbank. Tus productos siguen en el carrito y puedes intentar nuevamente.',
-                'show_cart_button': True  # ← Para mostrar botón "Volver al carrito"
+                'show_cart_button': True
             })
         
         # Flujo normal - pago exitoso o rechazado
@@ -432,50 +407,47 @@ def evaluate_payment(request):
             return redirect('cart_summary')
 
         try:
+            env = os.getenv('DJANGO_SETTINGS_MODULE', '')
+            
             # Desarrollo
             if 'dev' in env:
-                    tx = Transaction.build_for_integration(
-                        settings.TRANSBANK_COMMERCE_CODE,
-                        settings.TRANSBANK_API_KEY
-                    )
-
-                    # Producción
+                tx = Transaction.build_for_integration(
+                    settings.TRANSBANK_COMMERCE_CODE,
+                    settings.TRANSBANK_API_KEY
+                )
+            # Producción
             elif 'prod' in env:
-                    tx = Transaction.build_for_production(
-                        settings.TRANSBANK_COMMERCE_CODE,
-                        settings.TRANSBANK_API_KEY
-                    )
+                tx = Transaction.build_for_production(
+                    settings.TRANSBANK_COMMERCE_CODE,
+                    settings.TRANSBANK_API_KEY
+                )
 
             response = tx.commit(token)
 
             if response['status'] == 'AUTHORIZED':
-                # ✅ PAGO EXITOSO
-                order_id = request.session.get('order_id')
-                buy_order = response.get('buy_order')
+                # ✅ PAGO EXITOSO - AHORA SÍ CREAR LA ORDEN
                 
-                # Buscar orden por ID o buy_order
-                order = None
-                if order_id:
-                    try:
-                        order = Order.objects.get(id=order_id)
-                    except Order.DoesNotExist:
-                        pass
+                # Verificar que tenemos el buy_order pendiente
+                pending_buy_order = request.session.get('pending_buy_order')
+                if not pending_buy_order:
+                    raise ValueError("No se encontró información de la orden pendiente")
                 
-                if not order and buy_order:
-                    try:
-                        order = Order.objects.get(buy_order=buy_order)
-                    except Order.DoesNotExist:
-                        pass
-                
-                if not order:
-                    raise ValueError("No se encontró la orden asociada")
+                # CREAR LA ORDEN AHORA
+                order = create_order_from_session(request)
+                order.buy_order = pending_buy_order
+                order.session_id = request.session.session_key
+                order.paid = True
+                order.payment_status = 'APPROVED'
+                order.save()
                 
                 # Actualizar orden con datos de Transbank
                 update_order_with_transaction(order, response)
                 
                 order_items = order.orderitem_set.all()
                 
-                # ✅ LIMPIAR CARRITO SOLO AQUÍ (PAGO EXITOSO)
+                # Limpiar sesión y carrito
+                request.session.pop('pending_buy_order', None)
+                request.session.pop('pending_payment', None)
                 clear_cart_and_session(request)
                 
                 # Enviar email de confirmación
@@ -505,26 +477,17 @@ def evaluate_payment(request):
                     'transaction': transaction_data,
                 })
             else:
-                # ❌ PAGO RECHAZADO
-                order_id = request.session.get('order_id')
-                if order_id:
-                    try:
-                        order = Order.objects.get(id=order_id)
-                        order.delete()
-                    except Order.DoesNotExist:
-                        pass
+                # ❌ PAGO RECHAZADO - No hay orden creada, solo limpiar sesión
+                request.session.pop('pending_buy_order', None)
+                request.session.pop('pending_payment', None)
                 
                 # NO LIMPIAR EL CARRITO - mantener los productos
-                # Limpiar solo las referencias de la orden
-                request.session.pop('buy_order', None)
-                request.session.pop('order_id', None)
-                
                 messages.error(request, "Tu pago fue rechazado. Tus productos siguen en el carrito.")
                 return render(request, 'payment/payment_failed.html', {
                     'reason': 'rejected',
                     'message': 'Tu pago fue rechazado por el banco. Por favor verifica tus datos e intenta nuevamente. Tus productos siguen en el carrito.',
                     'status': response.get('status'),
-                    'show_cart_button': True  # ← Para mostrar botón "Volver al carrito"
+                    'show_cart_button': True
                 })
                 
         except Exception as e:
@@ -532,25 +495,15 @@ def evaluate_payment(request):
             import traceback
             traceback.print_exc()
             
-            # Eliminar orden si existe
-            order_id = request.session.get('order_id')
-            if order_id:
-                try:
-                    order = Order.objects.get(id=order_id)
-                    order.delete()
-                except Order.DoesNotExist:
-                    pass
+            # Limpiar sesión pendiente (no hay orden que eliminar)
+            request.session.pop('pending_buy_order', None)
+            request.session.pop('pending_payment', None)
             
             # NO LIMPIAR EL CARRITO - mantener los productos
-            # Limpiar solo las referencias de la orden
-            request.session.pop('buy_order', None)
-            request.session.pop('order_id', None)
-            
-            # messages.error(request, "Ocurrió un error al procesar el pago. Tus productos siguen en el carrito.")
             return render(request, 'payment/payment_failed.html', {
                 'reason': 'error',
                 'message': 'Ocurrió un error técnico al procesar tu pago. Tus productos siguen en el carrito. Por favor intenta nuevamente o contacta con soporte.',
-                'show_cart_button': True  # ← Para mostrar botón "Volver al carrito"
+                'show_cart_button': True
             })
     
     messages.error(request, "Acceso inválido.")
