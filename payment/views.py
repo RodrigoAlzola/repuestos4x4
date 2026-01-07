@@ -11,7 +11,7 @@ from store.forms import GuestUserForm, UserInfoForm
 from workshop.models import Workshop
 import datetime
 import uuid
-from store.emails import send_order_confirmation_email_async
+from store.emails import send_order_confirmation_email_async, send_provider_order_notification_async
 
 from transbank.webpay.webpay_plus.transaction import Transaction
 from django.conf import settings
@@ -455,6 +455,12 @@ def evaluate_payment(request):
                     send_order_confirmation_email_async(order)
                 except Exception as e:
                     print(f"Error enviando email de confirmación: {e}")
+
+                # Enviar email a proveedores
+                try:
+                    send_provider_order_notification_async(order)
+                except Exception as e:
+                    print(f"Error enviando emails a proveedores: {e}")
                 
                 # Preparar datos para el template
                 transaction_data = {

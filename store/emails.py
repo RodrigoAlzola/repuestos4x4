@@ -247,3 +247,143 @@ def send_order_confirmation_email_async(order):
     email_thread.daemon = True
     email_thread.start()
     # logger.info(f"[ORDER EMAIL] Thread iniciado para orden #{order.id}")
+
+
+def send_provider_order_notification(order):
+    """Envía email a cada proveedor con sus productos de la orden"""
+    logger.info(f"[PROVIDER EMAIL] Iniciando envío para orden #{order.id}")
+    
+    # Agrupar items por proveedor
+    items_by_provider = {}
+    for item in order.orderitem_set.all():
+        provider = item.product.provider
+        if provider:
+            if provider not in items_by_provider:
+                items_by_provider[provider] = []
+            items_by_provider[provider].append(item)
+    
+    # Enviar email a cada proveedor
+    for provider, items in items_by_provider.items():
+        if not provider.email:
+            logger.warning(f"[PROVIDER EMAIL] Proveedor {provider.name} no tiene email configurado")
+            continue
+        
+        # Calcular subtotal del proveedor
+        provider_total = sum(item.get_total() for item in items)
+        
+        # Construir lista de productos del proveedor
+        products_html = ""
+        for item in items:
+            badge = '<span style="background-color: #17a2b8; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.8em;">Internacional</span>' if item.is_international else ''
+            products_html += f"""
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{item.product.part_number}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{item.product.name} {badge}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">{item.quantity}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${item.price:,.0f}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${item.get_total():,.0f}</td>
+            </tr>
+            """
+        
+        subject = f'Nueva Orden #{order.buy_order} - 4x4MAX'
+        
+        html_message = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+                <div style="background-color: #007bff; color: white; padding: 20px; text-align: center;">
+                    <h1>Nueva Orden de Compra</h1>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <h2>Hola {provider.name},</h2>
+                    <p>Se ha generado una nueva orden que incluye productos de tu catálogo.</p>
+                    
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Número de Orden:</strong> #{order.buy_order}</p>
+                        <p style="margin: 5px 0;"><strong>Fecha:</strong> {order.date_order.strftime('%d/%m/%Y %H:%M')}</p>
+                        <p style="margin: 5px 0;"><strong>Estado de Pago:</strong> <span style="color: #28a745;">✓ PAGADO</span></p>
+                    </div>
+                    
+                    <h3>Información del Cliente</h3>
+                    <p>
+                        <strong>Nombre:</strong> {order.full_name}<br>
+                        <strong>Email:</strong> {order.email}<br>
+                        <strong>Teléfono:</strong> {order.phone}
+                    </p>
+                    
+                    <h3>Dirección de Envío</h3>
+                    <p style="white-space: pre-line; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">{order.shipping_address}</p>
+                    
+                    <h3>Productos Solicitados</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #007bff; color: white;">
+                                <th style="padding: 10px; text-align: left;">Part Number</th>
+                                <th style="padding: 10px; text-align: left;">Producto</th>
+                                <th style="padding: 10px; text-align: center;">Cantidad</th>
+                                <th style="padding: 10px; text-align: right;">Precio Unit.</th>
+                                <th style="padding: 10px; text-align: right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {products_html}
+                        </tbody>
+                        <tfoot>
+                            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                <td colspan="4" style="padding: 15px; text-align: right;">TOTAL DE TUS PRODUCTOS:</td>
+                                <td style="padding: 15px; text-align: right; color: #007bff; font-size: 1.2em;">${provider_total:,.0f}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    
+                    <div style="margin-top: 30px; padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+                        <h4 style="margin-top: 0;">⚠️ Acción Requerida:</h4>
+                        <ol style="margin-bottom: 0;">
+                            <li>Confirma la disponibilidad de los productos</li>
+                            <li>Prepara el despacho según tu acuerdo con 4x4MAX</li>
+                            <li>Notifica cualquier problema de stock o demora</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background-color: #e7f3ff; border-radius: 5px;">
+                        <p style="margin: 0;"><strong>📞 Contacto:</strong> Si tienes dudas sobre esta orden, contáctanos support@4x4max.cl.</p>
+                    </div>
+                </div>
+                
+                <div style="background-color: #343a40; color: white; padding: 20px; text-align: center; margin-top: 30px;">
+                    <p style="margin: 5px 0;">Gracias por ser parte de 4x4MAX</p>
+                    <p style="font-size: 0.9em; margin: 5px 0;">🌐 <a href="https://4x4max.cl" style="color: #28a745;">4x4max.cl</a></p>
+                </div>
+            </body>
+        </html>
+        """
+        
+        plain_message = strip_tags(html_message)
+        
+        try:
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[provider.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            logger.info(f"[PROVIDER EMAIL] ✅ Email enviado a {provider.name} ({provider.email})")
+        except Exception as e:
+            logger.error(f"[PROVIDER EMAIL] ❌ Error enviando a {provider.name}: {e}")
+            # No lanzar excepción para que continúe con otros proveedores
+
+
+def send_provider_order_notification_async(order):
+    """Envía emails a proveedores de forma asíncrona"""
+    def send_in_background():
+        try:
+            send_provider_order_notification(order)
+        except Exception as e:
+            logger.error(f"[PROVIDER EMAIL ASYNC] Error en thread: {e}")
+    
+    email_thread = Thread(target=send_in_background)
+    email_thread.daemon = True
+    email_thread.start()
+    logger.info(f"[PROVIDER EMAIL] Thread iniciado para orden #{order.id}")
