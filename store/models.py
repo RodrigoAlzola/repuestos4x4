@@ -17,7 +17,7 @@ class Profile(models.Model):
     commune = models.CharField(max_length=200, blank=True)
     zipcode = models.CharField(max_length=200, blank=True)
     country = models.CharField(max_length=200, blank=True)
-    old_cart = models.CharField(max_length=20000, blank=True)
+    old_cart = models.TextField(blank=True, null=True, default='')
 
     def __str__(self):
         return self.user.username
