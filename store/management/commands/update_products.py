@@ -12,7 +12,7 @@ def convertion(value):
     """
     Convierte precio aplicando tarifa del 0% y redondea a .0 o .5
     """
-    tarif = 1.00 #1.19
+    tarif = 1.19 #1.19
 
     # Aplicar tarifa y dividir por 1000 para generar decimales
     precio_base = value * tarif / 1000
@@ -99,7 +99,7 @@ class Command(BaseCommand):
         df_nuevos_unique = df_new.drop_duplicates(subset=['Numero de parte'], keep='first')
 
         # Cargar la base de datos actual para comparar
-        products = Product.objects.filter(provider=provider)
+        # products = Product.objects.filter(provider=provider)
 
         # Crear un diccionario para búsqueda O(1) en lugar de queries O(n)
         products_dict = {p.part_number: p for p in Product.objects.filter(provider=provider)}

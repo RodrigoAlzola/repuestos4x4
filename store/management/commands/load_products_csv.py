@@ -31,16 +31,15 @@ class Command(BaseCommand):
     help = 'Carga productos y compatibilidades desde un archivo CSV'
 
     def add_arguments(self, parser):
-        parser.add_argument('csv_path', type=str, help='Ruta del archivo CSV')
+        parser.add_argument(
+            '--csv_path',
+            type=str, 
+            default=r'C:\Users\rodri\NewProject\custcat.csv', 
+            help='Ruta del archivo CSV')
         parser.add_argument(
             '--skip-image-check',
             action='store_true',
             help='Omite la verificación de imágenes (más rápido)'
-        )
-        parser.add_argument(
-            '--update-existing',
-            action='store_true',
-            help='Actualiza productos existentes en lugar de saltarlos'
         )
 
     def handle(self, *args, **kwargs):
@@ -62,7 +61,6 @@ class Command(BaseCommand):
 
         csv_path = kwargs['csv_path']
         skip_image_check = kwargs.get('skip_image_check', False)
-        update_existing = kwargs.get('update_existing', False)
 
         try:
             df = pd.read_csv(csv_path, encoding='latin-1')
@@ -82,8 +80,6 @@ class Command(BaseCommand):
         df['Foto'] = df['Foto'].replace("", default_image)
 
         # 4. FILTRAR productos sin stock
-        total_inicial = len(df)
-        
         # Convertir a numérico y llenar NaN con 0
         df['BR SOH'] = pd.to_numeric(df['BR SOH'], errors='coerce').fillna(0)
         df['MELSOH'] = pd.to_numeric(df['MELSOH'], errors='coerce').fillna(0)
@@ -91,57 +87,31 @@ class Command(BaseCommand):
         # Filtrar: mantener solo productos con stock local O internacional > 0
         df = df[(df['BR SOH'] > 0) | (df['MELSOH'] > 0)]
         
-        productos_sin_stock = total_inicial - len(df)
-        
-        self.stdout.write(self.style.WARNING(
-            f'📦 Productos sin stock filtrados: {productos_sin_stock} de {total_inicial}'
-        ))
-        
         # ============ NUEVO: FILTRAR PRODUCTOS EXISTENTES ============
         self.stdout.write(self.style.WARNING(f'🔍 Verificando productos existentes en la base de datos...'))
         
         # Obtener todos los part_numbers existentes en la BD
+        productos = Product.objects.filter(provider=provider)
+        print('Todos los productos', len(productos))
+
         existing_part_numbers = set(
             Product.objects.filter(provider=provider)
-            .values_list('sku', flat=True)
+            .values_list('part_number', flat=True)
         )
         
         self.stdout.write(self.style.SUCCESS(
             f'📊 Productos existentes en BD: {len(existing_part_numbers)}'
         ))
         
-        # Filtrar DataFrame según si queremos actualizar o no
-        if update_existing:
-            # Mantener todos (actualizará los existentes)
-            productos_a_procesar = len(df)
-            productos_saltados = 0
-            self.stdout.write(self.style.WARNING(
-                f'🔄 Modo actualización: Se procesarán todos los productos (actualizando existentes)'
-            ))
-        else:
-            # Filtrar productos que ya existen (solo crear nuevos)
-            df_original_count = len(df)
-            df = df[~df['Numero de parte'].astype(str).isin(existing_part_numbers)]
-            productos_saltados = df_original_count - len(df)
-            productos_a_procesar = len(df)
-            
-            self.stdout.write(self.style.SUCCESS(
-                f'⏭️  Productos existentes saltados: {productos_saltados}'
-            ))
+        # Filtrar productos que ya existen (solo crear nuevos)
+        df = df[~df['Numero de parte'].astype(str).isin(existing_part_numbers)]
+        productos_a_procesar = len(df)
         
         self.stdout.write(self.style.SUCCESS(
-            f'✨ Productos nuevos a procesar: {productos_a_procesar}'
+            f'✨ Filas nuevas a procesar: {productos_a_procesar}'
         ))
-        # =============================================================
-
-        if len(df) == 0:
-            self.stdout.write(self.style.WARNING(
-                '⚠️  No hay productos nuevos para procesar. Todos ya existen en la base de datos.'
-            ))
-            return
 
         creados = 0
-        actualizados = 0
         compatibles = 0
         compatibles_duplicados = 0
         imagenes_invalidas = 0
@@ -151,6 +121,7 @@ class Command(BaseCommand):
         
         total_rows = len(df)
 
+        new_products_preview = "0000"
         for index, row in df.iterrows():
             try:
                 # Progress indicator cada 50 filas
@@ -160,94 +131,68 @@ class Command(BaseCommand):
 
                 # Limpieza de columnas
                 sku = str(row["Numero de parte"])
-                name = row["Descripcion"]
-                part_number = row["Numero de parte"]
-                price = convertion(float(row["Minorista"]))
-                description = row["Descripcion"]
-                stock = int(row["BR SOH"]) if pd.notna(row["BR SOH"]) else 0
-                stock_international = int(row["MELSOH"]) if pd.notna(row["MELSOH"]) else 0
-                tariff_code = str(row["Tarrif Code"]) if pd.notna(row["Tarrif Code"]) else ""
-                weight = float(row["Peso (kg)"]) if pd.notna(row["Peso (kg)"]) else 0
-                length = float(row["Largo (cm)"]) if pd.notna(row["Largo (cm)"]) else 0
-                height = float(row["Alto (cm)"]) if pd.notna(row["Alto (cm)"]) else 0
-                width = float(row["Ancho (cm)"]) if pd.notna(row["Ancho (cm)"]) else 0
-                volume = float(row["Volumen (m3)"]) if pd.notna(row["Volumen (m3)"]) else 0
-                motor = str(row["Motor"]) if pd.notna(row["Motor"]) else ""
                 brand = str(row["Marca"])
                 model = str(row["Modelo"])
                 serie = str(row["Serie"])
-                grupo = str(row["Grupo"])
-                image = row["Foto"]
 
-                # Verificar imagen usando caché (solo verifica URLs no vistas antes)
-                if not skip_image_check:
-                    if image not in verified_images:
-                        original_image = image
-                        image = verify_image_url(image, default_image)
-                        verified_images[original_image] = image
-                        
-                        if image == default_image and original_image != default_image:
-                            imagenes_invalidas += 1
-                    else:
-                        image = verified_images[image]
+                if sku != new_products_preview:
+                    new_products_preview = sku
 
-                # Obtener o crear categoría
-                category, _ = Category.objects.get_or_create(name=grupo)
+                    name = row["Descripcion"]
+                    part_number = row["Numero de parte"]
+                    price = convertion(float(row["Minorista"]))
+                    description = row["Descripcion"]
+                    stock = int(row["BR SOH"]) if pd.notna(row["BR SOH"]) else 0
+                    stock_international = int(row["MELSOH"]) if pd.notna(row["MELSOH"]) else 0
+                    subcategory = row['Subgrupo'] if pd.notna(row['Subgrupo']) else ''
+                    tariff_code = str(row["Tarrif Code"]) if pd.notna(row["Tarrif Code"]) else ""
+                    weight = float(row["Peso (kg)"]) if pd.notna(row["Peso (kg)"]) else 0
+                    length = float(row["Largo (cm)"]) if pd.notna(row["Largo (cm)"]) else 0
+                    height = float(row["Alto (cm)"]) if pd.notna(row["Alto (cm)"]) else 0
+                    width = float(row["Ancho (cm)"]) if pd.notna(row["Ancho (cm)"]) else 0
+                    volume = float(row["Volumen (m3)"]) if pd.notna(row["Volumen (m3)"]) else 0
+                    motor = str(row["Motor"]) if pd.notna(row["Motor"]) else ""
+                    grupo = str(row["Grupo"])
+                    image = row["Foto"]
 
-                # Buscar si el producto ya existe
-                try:
-                    product = Product.objects.get(part_number=part_number)
-                    
-                    # Si estamos en modo update, actualizar
-                    if update_existing:
-                        product.sku = sku
-                        product.name = name
-                        product.price = price
-                        product.category = category
-                        product.description = description
-                        product.stock = stock
-                        product.stock_international = stock_international
-                        product.tariff_code = tariff_code
-                        product.weight_kg = weight
-                        product.length_cm = length
-                        product.height_cm = height
-                        product.width_cm = width
-                        product.volume_m3 = volume
-                        product.motor = motor
-                        product.provider = provider
+                    # Verificar imagen usando caché (solo verifica URLs no vistas antes)
+                    if not skip_image_check:
+                        if image not in verified_images:
+                            original_image = image
+                            image = verify_image_url(image, default_image)
+                            verified_images[original_image] = image
+                            
+                            if image == default_image and original_image != default_image:
+                                imagenes_invalidas += 1
+                        else:
+                            image = verified_images[image]
 
-                        if not skip_image_check:
-                            product.image = image
+                    # Obtener o crear categoría
+                    category, _ = Category.objects.get_or_create(name=grupo)
 
-                        product.save()
-                        actualizados += 1
-                    else:
-                        # No debería llegar aquí si el filtrado funcionó
-                        continue
-                    
-                except Product.DoesNotExist:
                     # Crear nuevo producto
                     product = Product.objects.create(
-                        part_number=part_number,
-                        sku=sku,
-                        name=name,
-                        price=price,
-                        category=category,
-                        description=description,
-                        image=image,
-                        is_sale=False,
-                        sale_price=0,
-                        stock=stock,
-                        stock_international=stock_international,
-                        tariff_code=tariff_code,
-                        weight_kg=weight,
-                        length_cm=length,
-                        height_cm=height,
-                        width_cm=width,
-                        volume_m3=volume,
-                        motor=motor,
-                        provider=provider,
-                    )
+                            part_number=part_number,
+                            sku=sku,
+                            name=name,
+                            price=price,
+                            category=category,
+                            subcategory=subcategory,
+                            description=description,
+                            image=image,
+                            is_sale=False,
+                            sale_price=0,
+                            stock=stock,
+                            stock_international=stock_international,
+                            tariff_code=tariff_code,
+                            weight_kg=weight,
+                            length_cm=length,
+                            height_cm=height,
+                            width_cm=width,
+                            volume_m3=volume,
+                            motor=motor,
+                            provider=provider,
+                        )
                     creados += 1
 
                 # Crear compatibilidad SOLO si no existe
@@ -276,15 +221,6 @@ class Command(BaseCommand):
             f'✅ PROCESO COMPLETADO\n'
             f'{"="*60}\n'
             f'⏱️  Tiempo total: {timedelta(seconds=int(total_time))} ({total_time:.2f} segundos)\n'
-            f'📦 Productos sin stock filtrados: {productos_sin_stock}\n'
-            f'⏭️  Productos existentes saltados: {productos_saltados}\n'
             f'✨ Productos nuevos creados: {creados}\n'
-            f'🔄 Productos actualizados: {actualizados}\n'
             f'🔗 Compatibilidades nuevas: {compatibles}\n'
-            f'♻️  Compatibilidades duplicadas: {compatibles_duplicados}\n'
-            f'🖼️  Imágenes inválidas reemplazadas: {imagenes_invalidas}\n'
-            f'🌐 URLs de imágenes únicas verificadas: {len(verified_images)}\n'
-            f'{"="*60}\n'
-            f'⚡ Velocidad: {total_rows/total_time if total_time > 0 else 0:.2f} productos/segundo\n'
-            f'{"="*60}'
         ))

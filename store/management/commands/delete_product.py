@@ -8,9 +8,10 @@ def delete_product(product_id):
         return
 
     print(products[0].price)
+    product = products[0]
     # Delete related Compatibility records
     Compatibility.objects.filter(product=product).delete()
 
     # Finally, delete the Product itself
-    product[0].delete()
+    product.delete()
     print(f"Product with id {product_id} and its related records have been deleted.")

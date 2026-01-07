@@ -54,7 +54,7 @@ class Provider(models.Model):
     name = models.CharField(max_length=50, blank=False)
     contact_name = models.CharField(max_length=50, blank=False)
     phone = models.CharField(max_length=20, blank=False)
-    email = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(max_length=100, blank=False)
     address1 = models.CharField(max_length=200, blank=True)
     address2 = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=200, blank=True)
