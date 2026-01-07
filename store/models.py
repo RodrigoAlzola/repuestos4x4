@@ -34,6 +34,7 @@ post_save.connect(create_profile, sender=User)
 
 class Category(models.Model):
     name = models.CharField(max_length=50)
+    icon = models.CharField(max_length=50, default='bi-tools', blank=True)
 
     def __str__(self):
         return self.name

@@ -24,6 +24,46 @@
 
 </header>
 
+<section class="py-5 bg-light">
+    <div class="container-fluid px-2">
+        <div class="text-center mb-4">
+            <h2 class="fw-bolder">Explora por Categorías</h2>
+            <p class="lead text-muted">Encuentra los repuestos perfectos para tu vehículo</p>
+        </div>
+        <div class="row gx-1 row-cols-2 row-cols-md-3 row-cols-xl-5 justify-content-center">
+            {% for category in categories %}
+            <div class="col mb-4">
+                <a href="{% url 'all_products' %}?category={{ category.name }}" class="text-decoration-none">
+                    <div class="card h-100 text-center border-0 shadow-sm category-card" style="background-color: #ef4747;">
+                        <div class="card-body d-flex flex-column justify-content-center p-4">
+                            <div class="mb-3">
+                                <span class="material-symbols-outlined text-dark" style="font-size: 3rem;">{{ category.icon }}</span>
+                            </div>
+                            <h5 class="fw-bold mb-0 text-dark">{{ category.name }}</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<style>
+.category-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2) !important;
+}
+
+.category-card:hover .text-dark {
+    color: #ffffff !important;
+}
+</style>
 
         <!-- Section-->
 <section class="py-5">

@@ -24,11 +24,17 @@ def home(request):
     rear_axle = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0), category__name__iexact='REAR AXLE').order_by('?')[:4]
     engine = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0), category__name__iexact='ENGINE').order_by('?')[:4]
 
-    header_image = 'media/marketing/IMG-20250815-WA0022.jpg'  # ruta relativa dentro de MEDIA
+    # Obtener todas las categorías
+    categories = Category.objects.all().order_by('name')
+
+    # Ruta relativa dentro de MEDIA
+    header_image = 'media/marketing/IMG-20250815-WA0022.jpg'  
+
     return render(request, 'home.html', {
         'batteries': batteries,
         'rear_axle': rear_axle,
         'engine': engine,
+        'categories': categories,
         'header_image': header_image,
     })
 
