@@ -36,7 +36,7 @@
         <!-- Shipping Address -->
         <div class="card mb-4">
           <div class="card-header bg-success text-white">
-            <i class="bi bi-geo-alt me-2"></i>Dirección de Envío
+            <i class="bi bi-geo-alt me-2"></i>Dirección de Envío 
           </div>
           <div class="card-body">
             <div class="mb-1"><strong>Nombre:</strong> {{ shipping_info.shipping_full_name }}</div>
@@ -54,6 +54,13 @@
             {% endif %}
             <div class="mb-1"><strong>País:</strong> {{ shipping_info.shipping_country }}</div>
           </div>
+        </div>
+
+        <!-- Mensaje de destino -->
+        <div class="alert {% if is_workshop_shipping %}alert-info{% else %}alert-success{% endif %} text-center">
+          {% if not is_workshop_shipping %}
+            Todos nuestros envios son por pagar al currier nacional.
+          {% endif %}
         </div>
 
         <!-- Método de Pago -->
@@ -121,38 +128,30 @@
 
     <!-- Order summary -->
     <div class="col-md-4">
-      <div class="card sticky-top" style="top: 20px;">
+      <div class="card">
         <div class="card-header bg-dark text-white">
           <i class="bi bi-cart3 me-2"></i>Resumen de Orden
         </div>
         <div class="card-body">
           {% for product in cart_products %}
-            <div class="mb-3 pb-3 border-bottom">
-              <strong>{{ product.name }}</strong><br>
-              {% if product.is_sale %}
-                <strike class="text-muted">$ {{ product.price|currency_format }}</strike> 
-                <span class="text-success">$ {{ product.sale_price|currency_format }}</span>
-              {% else %}
-                <span>$ {{ product.price|currency_format }}</span>
+            <strong>{{ product.name }}</strong><br>
+            {% if product.is_sale %}
+              <strike>$ {{ product.price|currency_format }}</strike> &nbsp; $ {{ product.sale_price|currency_format }}
+            {% else %}
+              $ {{ product.price|currency_format }}
+            {% endif %}
+            <br>
+            <small>Cantidad:</small>
+            {% for key, value in quantities.items %}
+              {% if key == product.id|slugify %}
+                {{ value }}
               {% endif %}
-              <br>
-              <small class="text-muted">Cantidad: 
-                {% for key, value in quantities.items %}
-                  {% if key == product.id|slugify %}
-                    {{ value }}
-                  {% endif %}
-                {% endfor %}
-              </small>
-            </div>
+            {% endfor %}
+            <br><br>
           {% endfor %}
-          
-          <hr class="my-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Total:</h5>
-            <h4 class="mb-0 text-success">$ {{ total|currency_format }}</h4>
-          </div>
-          
-          <br>
+          <hr>
+          <h5><strong>Total: ${{ total|currency_format }} CLP</strong></h5> (con IVA incluido)
+          <br><br>
           <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary w-100">
             <i class="bi bi-pencil me-2"></i>Actualizar Items
           </a>

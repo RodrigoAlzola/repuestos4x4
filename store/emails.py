@@ -37,7 +37,7 @@ def send_registration_email(user_email, full_name):
                 </div>
                 
                 <p style="color: #555; line-height: 1.6;">
-                    Si tienes alguna pregunta, no dudes en contactarnos respondiendo a este correo.
+                    Si tienes alguna pregunta, no dudes en contactarnos respondiendo a este correo contacto@4x4max.cl.
                 </p>
             </div>
             
@@ -200,10 +200,11 @@ def send_order_confirmation_email(order):
                 <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;">
                     <h4>Próximos Pasos:</h4>
                     <ol>
-                        <li>Recibirás notificaciones cuando tu(s) pedido(s) sea(n) despachado(s)</li>
+                        <li>Recibirás notificaciones cuando tu pedido sea despachado.</li>
                         {next_steps_mixed}
                         {next_steps_workshop}
-                        <li>Si tienes alguna pregunta, contáctanos respondiendo a este correo</li>
+                        <li>En caso de necesitar factura, escribenos un correo con el numero de orden y los detalles al correo de contacto que aparece abajo.</li>
+                        <li>Si tienes alguna pregunta, contáctanos respondiendo a este correo contacto@4x4max.cl.</li>
                     </ol>
                 </div>
             </div>
@@ -346,7 +347,7 @@ def send_provider_order_notification(order):
                     </div>
                     
                     <div style="margin-top: 20px; padding: 15px; background-color: #e7f3ff; border-radius: 5px;">
-                        <p style="margin: 0;"><strong>📞 Contacto:</strong> Si tienes dudas sobre esta orden, contáctanos support@4x4max.cl.</p>
+                        <p style="margin: 0;"><strong>📞 Contacto:</strong> Si tienes dudas sobre esta orden, contáctanos contacto@4x4max.cl.</p>
                     </div>
                 </div>
                 

@@ -9,7 +9,7 @@ from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
 from payment.forms import ShippingForm
 from payment.models import ShippingAddress
 from django import forms 
-from django.db.models import Q
+from django.db.models import Q, Count
 import json
 from cart.cart import Cart
 from django.views.decorators.cache import never_cache
@@ -25,10 +25,10 @@ def home(request):
     engine = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0), category__name__iexact='ENGINE').order_by('?')[:4]
 
     # Obtener todas las categorías
-    categories = Category.objects.all().order_by('name')
+    categories = Category.objects.annotate(product_count=Count('product')).filter(product_count__gt=0).order_by('name')
 
     # Ruta relativa dentro de MEDIA
-    header_image = 'media/marketing/IMG-20250815-WA0022.jpg'  
+    header_image = 'media/marketing/IMG-home.png'  
 
     return render(request, 'home.html', {
         'batteries': batteries,

@@ -38,7 +38,8 @@
           {% if is_workshop_shipping %}
             <i class="bi bi-tools me-2"></i><strong>Este pedido será enviado al taller seleccionado.</strong>
           {% else %}
-            <i class="bi bi-house-door me-2"></i><strong>Selecciona tu dirección de envío.</strong>
+            <i class="bi bi-house-door me-2"></i><strong>Selecciona tu dirección de envío.</strong><br/>
+            Todos nuestros envios son por pagar al currier nacional.
           {% endif %}
         </div>
 
@@ -391,8 +392,8 @@
             <br><br>
           {% endfor %}
           <hr>
-          <h5><strong>Total: ${{ total|currency_format }}</strong></h5>
-          <br>
+          <h5><strong>Total: ${{ total|currency_format }} CLP</strong></h5> (con IVA incluido)
+          <br><br>
           <a href="{% url 'cart_summary' %}" class="btn btn-sm btn-outline-secondary w-100">
             <i class="bi bi-pencil me-2"></i>Actualizar Items
           </a>
