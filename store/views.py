@@ -360,6 +360,7 @@ def all_products(request):
     selected_serie = request.GET.get('serie')
     search_query = request.GET.get('search', '')
 
+    # Base de productos con stock
     products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
 
     # Aplicar búsqueda
@@ -393,43 +394,77 @@ def all_products(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Datos para filtros (únicos y ordenados) - VERSIÓN OPTIMIZADA
-    categories = Category.objects.all().order_by('name')
-
-    # Obtener subcategorías según la categoría seleccionada
-    if selected_category:
-        # Subcategorías solo de la categoría seleccionada
-        subcategories = (
-            Product.objects
-            .filter(category__name=selected_category)
-            .exclude(subcategory__isnull=True)
-            .exclude(subcategory='')
-            .values_list('subcategory', flat=True)
-            .distinct()
-            .order_by('subcategory')
-        )
+    # ===== FILTROS DINÁMICOS BIDIRECCIONALES =====
+    
+    # 1. CATEGORÍAS DINÁMICAS (filtradas por compatibilidad)
+    if selected_brand or selected_model or selected_serie:
+        # Obtener productos que coinciden con la compatibilidad seleccionada
+        filtered_products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
+        
+        if selected_brand:
+            filtered_products = filtered_products.filter(compatibilities__brand=selected_brand)
+        if selected_model:
+            filtered_products = filtered_products.filter(compatibilities__model=selected_model)
+        if selected_serie:
+            filtered_products = filtered_products.filter(compatibilities__serie=selected_serie)
+        
+        # Obtener solo las categorías de esos productos
+        category_ids = filtered_products.values_list('category_id', flat=True).distinct()
+        categories = Category.objects.filter(id__in=category_ids).order_by('name')
     else:
-        # Todas las subcategorías si no hay categoría seleccionada
-        subcategories = (
-            Product.objects
-            .exclude(subcategory__isnull=True)
-            .exclude(subcategory='')
-            .values_list('subcategory', flat=True)
-            .distinct()
-            .order_by('subcategory')
-        )
+        categories = Category.objects.all().order_by('name')
+
+    # 2. SUBCATEGORÍAS DINÁMICAS
+    subcategories_query = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
     
-    # Construir compat_data con valores únicos y ordenados (más eficiente)
-    compat_data = {}
+    if selected_category:
+        subcategories_query = subcategories_query.filter(category__name=selected_category)
     
-    # Obtener combinaciones únicas de marca-modelo-serie ordenadas
-    unique_compatibilities = (
-        Compatibility.objects
-        .values('brand', 'model', 'serie')
+    if selected_brand:
+        subcategories_query = subcategories_query.filter(compatibilities__brand=selected_brand)
+    if selected_model:
+        subcategories_query = subcategories_query.filter(compatibilities__model=selected_model)
+    if selected_serie:
+        subcategories_query = subcategories_query.filter(compatibilities__serie=selected_serie)
+    
+    subcategories = (
+        subcategories_query
+        .exclude(subcategory__isnull=True)
+        .exclude(subcategory='')
+        .values_list('subcategory', flat=True)
         .distinct()
-        .order_by('brand', 'model', 'serie')
+        .order_by('subcategory')
     )
 
+    # 3. COMPATIBILIDADES DINÁMICAS (filtradas por categoría)
+    if selected_category or selected_subcategory:
+        # Obtener productos que coinciden con la categoría seleccionada
+        filtered_products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
+        
+        if selected_category:
+            filtered_products = filtered_products.filter(category__name=selected_category)
+        if selected_subcategory:
+            filtered_products = filtered_products.filter(subcategory=selected_subcategory)
+        
+        # Obtener solo las compatibilidades de esos productos
+        compat_ids = filtered_products.values_list('compatibilities__id', flat=True).distinct()
+        unique_compatibilities = (
+            Compatibility.objects
+            .filter(id__in=compat_ids)
+            .values('brand', 'model', 'serie')
+            .distinct()
+            .order_by('brand', 'model', 'serie')
+        )
+    else:
+        unique_compatibilities = (
+            Compatibility.objects
+            .values('brand', 'model', 'serie')
+            .distinct()
+            .order_by('brand', 'model', 'serie')
+        )
+
+    # Construir compat_data
+    compat_data = {}
     for comp in unique_compatibilities:
         brand = comp['brand'].strip()
         model = comp['model'].strip()

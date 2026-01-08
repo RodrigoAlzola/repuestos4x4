@@ -27,9 +27,8 @@
           {% endfor %}
         </select>
 
-        <!-- Nuevo: Filtro de subcategoría -->
         <label>Subcategoría:</label>
-        <select name="subcategory" id="subcategory-select" class="form-select mb-3" {% if not selected_category %}disabled{% endif %}>
+        <select name="subcategory" id="subcategory-select" class="form-select mb-3">
           <option value="">-- Todas --</option>
           {% for subcat in subcategories %}
             <option value="{{ subcat }}" {% if selected_subcategory == subcat %}selected{% endif %}>{{ subcat }}</option>
@@ -53,18 +52,18 @@
         </select>
 
         <button type="submit" class="btn btn-primary w-100">Aplicar filtros</button>
+        <button type="button" id="clear-filters" class="btn btn-secondary w-100 mt-2">Limpiar filtros</button>
         <br><br>
       </form>
     </div>
 
-    <!-- Productos -->
-    <div class="col-md-9">
-      <div class="row">
-        {% for product in page_obj %}
-          {% if product.is_sale %}
+  <!-- Productos -->
+<div class="col-md-9">
+  <div class="row">
+    {% for product in page_obj %}
+      {% if product.is_sale %}
 <div class="col-md-4 mb-4">
     <div class="card h-100">
-        <!-- Sale badge-->
         <div class="badge bg-dark text-white position-absolute" style="top: 0.5rem; right: 0.5rem; z-index: 10;">
             OFERTA
         </div>
@@ -75,7 +74,28 @@
                 <strike class="text-muted">$ {{ product.price|currency_format }}</strike>
                 <span class="text-danger fw-bold ms-2">$ {{ product.sale_price|currency_format }}</span>
             </p>
-            <a href="{% url 'product' product.id %}?{% if selected_brand %}brand={{ selected_brand }}&{% endif %}{% if selected_model %}model={{ selected_model }}&{% endif %}{% if selected_serie %}serie={{ selected_serie }}{% endif %}" class="btn btn-outline-dark mt-auto">Ver más</a>
+            
+            <!-- Stock badge -->
+            {% if product.stock > 0 %}
+                <small class="text-success mb-2">✓ Stock disponible</small>
+            {% elif product.stock_international > 0 %}
+                <small class="text-info mb-2">🌎 Stock internacional</small>
+            {% endif %}
+            
+            <div class="mt-auto">
+                <a href="{% url 'product' product.id %}" class="btn btn-outline-dark w-100 mb-2">Ver más</a>
+                {% if product.stock > 0 or product.stock_international > 0 %}
+                    <button class="btn btn-success w-100 add-to-cart-btn" 
+                            data-product-id="{{ product.id }}"
+                            data-max-stock="{% if product.stock > 0 %}{{ product.stock }}{% else %}{{ product.stock_international }}{% endif %}">
+                        <i class="bi bi-cart-plus"></i> Agregar al carrito
+                    </button>
+                {% else %}
+                    <button class="btn btn-secondary w-100" disabled>
+                        Sin stock
+                    </button>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -86,101 +106,61 @@
         <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ product.name }}</h5>
             <p class="card-text">$ {{ product.price|currency_format }}</p>
-            <a href="{% url 'product' product.id %}?{% if selected_brand %}brand={{ selected_brand }}&{% endif %}{% if selected_model %}model={{ selected_model }}&{% endif %}{% if selected_serie %}serie={{ selected_serie }}{% endif %}" class="btn btn-outline-dark mt-auto">Ver más</a>
+            
+            <!-- Stock badge -->
+            {% if product.stock > 0 %}
+                <small class="text-success mb-2">✓ Stock disponible</small>
+            {% elif product.stock_international > 0 %}
+                <small class="text-info mb-2">🌎 Stock internacional</small>
+            {% endif %}
+            
+            <div class="mt-auto">
+                <a href="{% url 'product' product.id %}" class="btn btn-outline-dark w-100 mb-2">Ver más</a>
+                {% if product.stock > 0 or product.stock_international > 0 %}
+                    <button class="btn btn-success w-100 add-to-cart-btn" 
+                            data-product-id="{{ product.id }}"
+                            data-max-stock="{% if product.stock > 0 %}{{ product.stock }}{% else %}{{ product.stock_international }}{% endif %}">
+                        <i class="bi bi-cart-plus"></i> Agregar al carrito
+                    </button>
+                {% else %}
+                    <button class="btn btn-secondary w-100" disabled>
+                        Sin stock
+                    </button>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
 {% endif %}
-        {% empty %}
-          <p>No se encontraron productos con los filtros seleccionados.</p>
-        {% endfor %}
-      </div>
+    {% empty %}
+      <p>No se encontraron productos con los filtros seleccionados.</p>
+    {% endfor %}
+  </div>
 
-      <!-- Paginación -->
-      <nav>
-        <ul class="pagination justify-content-center">
-          {% if page_obj.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
-            </li>
-          {% endif %}
-          <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
-          {% if page_obj.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
-            </li>
-          {% endif %}
-        </ul>
-      </nav>
-    </div>
+
   </div>
 </div>
 
-<!-- Script para filtros en cascada -->
 <script>
+jQuery(document).ready(function($) {
   const compatData = {{ compat_data|safe }};
-  
-  // Selects de compatibilidad
   const brandSelect = document.getElementById('brand-select');
   const modelSelect = document.getElementById('model-select');
   const serieSelect = document.getElementById('serie-select');
-  
-  // Nuevos selects de categoría/subcategoría
   const categorySelect = document.getElementById('category-select');
   const subcategorySelect = document.getElementById('subcategory-select');
 
-  // ===== FUNCIONALIDAD DE CATEGORÍA/SUBCATEGORÍA =====
-  // Datos de subcategorías por categoría (generados desde Django)
-  const subcategoryData = {};
-  
-  {% for cat in categories %}
-    subcategoryData["{{ cat.name }}"] = [
-      {% for subcat in subcategories %}
-        "{{ subcat }}",
-      {% endfor %}
-    ];
-  {% endfor %}
+  // ===== MANTENER POSICIÓN DEL SCROLL =====
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
 
-  // Evento: Al cambiar categoría, habilitar/deshabilitar subcategoría
-  categorySelect.addEventListener('change', function() {
-    const selectedCategory = this.value;
-    
-    if (selectedCategory) {
-      // Habilitar subcategoría y hacer fetch de subcategorías
-      subcategorySelect.disabled = false;
-      
-      // Hacer una petición AJAX para obtener subcategorías dinámicamente
-      fetch(`?category=${selectedCategory}`, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      })
-      .then(response => response.text())
-      .then(html => {
-        // Extraer subcategorías del HTML de respuesta
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const newSubcategories = doc.querySelectorAll('#subcategory-select option');
-        
-        // Limpiar y repoblar
-        subcategorySelect.innerHTML = '<option value="">-- Todas --</option>';
-        newSubcategories.forEach(option => {
-          if (option.value) {
-            subcategorySelect.appendChild(option.cloneNode(true));
-          }
-        });
-      })
-      .catch(error => {
-        console.error('Error cargando subcategorías:', error);
-      });
-    } else {
-      // Deshabilitar y limpiar subcategoría
-      subcategorySelect.disabled = true;
-      subcategorySelect.innerHTML = '<option value="">-- Todas --</option>';
-    }
-  });
+  const scrollPos = sessionStorage.getItem('scrollPos');
+  if (scrollPos) {
+    document.documentElement.scrollTop = document.body.scrollTop = parseInt(scrollPos);
+    sessionStorage.removeItem('scrollPos');
+  }
 
-  // ===== FUNCIONALIDAD DE COMPATIBILIDAD (EXISTENTE) =====
   // Cargar marcas
   for (const brand in compatData) {
     const option = document.createElement('option');
@@ -195,34 +175,37 @@
     serieSelect.innerHTML = '<option value="">-- Todas --</option>';
     serieSelect.disabled = true;
 
-    if (brand && compatData[brand]) {
-      modelSelect.disabled = false;
-      for (const model in compatData[brand]) {
-        const option = document.createElement('option');
-        option.value = model;
-        option.textContent = model;
-        if (model === "{{ selected_model }}") option.selected = true;
-        modelSelect.appendChild(option);
-      }
-    } else {
+    if (!brand || !compatData[brand]) {
       modelSelect.disabled = true;
+      return;
+    }
+
+    modelSelect.disabled = false;
+    for (const model in compatData[brand]) {
+      const option = document.createElement('option');
+      option.value = model;
+      option.textContent = model;
+      if (model === "{{ selected_model }}") option.selected = true;
+      modelSelect.appendChild(option);
     }
   }
 
   function loadSeries(brand, model) {
     serieSelect.innerHTML = '<option value="">-- Todas --</option>';
-    if (brand && model && compatData[brand][model]) {
-      serieSelect.disabled = false;
-      compatData[brand][model].forEach(serie => {
-        const option = document.createElement('option');
-        option.value = serie;
-        option.textContent = serie;
-        if (serie === "{{ selected_serie }}") option.selected = true;
-        serieSelect.appendChild(option);
-      });
-    } else {
+    
+    if (!brand || !model || !compatData[brand] || !compatData[brand][model]) {
       serieSelect.disabled = true;
+      return;
     }
+    
+    serieSelect.disabled = false;
+    compatData[brand][model].forEach(serie => {
+      const option = document.createElement('option');
+      option.value = serie;
+      option.textContent = serie;
+      if (serie === "{{ selected_serie }}") option.selected = true;
+      serieSelect.appendChild(option);
+    });
   }
 
   brandSelect.addEventListener('change', () => {
@@ -233,13 +216,120 @@
     loadSeries(brandSelect.value, modelSelect.value);
   });
 
-  // Cargar modelos y series si ya hay selección
-  if ("{{ selected_brand }}") {
-    loadModels("{{ selected_brand }}");
-    if ("{{ selected_model }}") {
-      loadSeries("{{ selected_brand }}", "{{ selected_model }}");
+  const selectedBrand = "{{ selected_brand }}";
+  const selectedModel = "{{ selected_model }}";
+  
+  if (selectedBrand && compatData[selectedBrand]) {
+    loadModels(selectedBrand);
+    if (selectedModel && compatData[selectedBrand][selectedModel]) {
+      loadSeries(selectedBrand, selectedModel);
     }
   }
+
+  // Guardar posición al enviar formulario
+  document.getElementById('filter-form').addEventListener('submit', function() {
+    sessionStorage.setItem('scrollPos', window.pageYOffset || document.documentElement.scrollTop);
+  });
+
+  // Limpiar filtros
+  document.getElementById('clear-filters').addEventListener('click', function() {
+    sessionStorage.removeItem('scrollPos');
+    categorySelect.value = '';
+    subcategorySelect.value = '';
+    brandSelect.value = '';
+    modelSelect.value = '';
+    modelSelect.disabled = true;
+    serieSelect.value = '';
+    serieSelect.disabled = true;
+    document.querySelector('input[name="search"]').value = '';
+    window.location.href = window.location.pathname;
+  });
+
+  // ===== GUARDAR SCROLL AL HACER CLIC EN PRODUCTOS =====
+  document.querySelectorAll('a[href*="/product/"]').forEach(link => {
+    link.addEventListener('click', function() {
+      sessionStorage.setItem('scrollPos', window.pageYOffset || document.documentElement.scrollTop);
+    });
+  });
+
+  // ===== AGREGAR AL CARRITO =====
+  $(document).on('click', '.add-to-cart-btn', function(e) {
+    e.preventDefault();
+    
+    const button = $(this);
+    const productId = button.data('product-id');
+    
+    console.log('Agregando producto:', productId);
+    
+    button.prop('disabled', true);
+    const originalText = button.html();
+    button.html('<span class="spinner-border spinner-border-sm"></span> Agregando...');
+    
+    $.ajax({
+      type: 'POST',
+      url: "{% url 'cart_add' %}",
+      data: {
+        product_id: productId,
+        product_quantity: 1,
+        csrfmiddlewaretoken: '{{ csrf_token }}',
+        action: 'post'
+      },
+      success: function(json) {
+        $('#cart_quantity').text(json.quantity);
+        
+        button.html('<i class="bi bi-check-circle"></i> Agregado');
+        button.removeClass('btn-success').addClass('btn-primary');
+        
+        setTimeout(function() {
+          button.html(originalText);
+          button.removeClass('btn-primary').addClass('btn-success');
+          button.prop('disabled', false);
+        }, 1000);
+        
+        showNotification('Producto agregado al carrito');
+      },
+      error: function(xhr, errmsg, err) {
+        console.error("Error:", errmsg);
+        button.html('<i class="bi bi-x-circle"></i> Error');
+        button.removeClass('btn-success').addClass('btn-danger');
+        
+        setTimeout(function() {
+          button.html(originalText);
+          button.removeClass('btn-danger').addClass('btn-success');
+          button.prop('disabled', false);
+        }, 2000);
+        
+        showNotification('Error al agregar al carrito', 'error');
+      }
+    });
+  });
+
+  function showNotification(message, type = 'success') {
+    const bgColor = type === 'success' ? '#28a745' : '#dc3545';
+    const notification = $('<div>')
+      .text(message)
+      .css({
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        backgroundColor: bgColor,
+        color: 'white',
+        padding: '15px 20px',
+        borderRadius: '5px',
+        zIndex: 9999,
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+      });
+    
+    $('body').append(notification);
+    
+    setTimeout(function() {
+      notification.fadeOut(300, function() {
+        $(this).remove();
+      });
+    }, 3000);
+  }
+
+});
 </script>
 
 {% endblock %}

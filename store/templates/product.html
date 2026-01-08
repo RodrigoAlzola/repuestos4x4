@@ -135,7 +135,13 @@
           </div>
 
           <br/>
-          <div class="text-end">
+          <div class="d-flex justify-content-end gap-2">
+            <!-- Botón volver -->
+            <button type="button" class="btn btn-outline-secondary btn-lg" id="back-button">
+              <i class="bi bi-arrow-left me-2"></i>Volver
+            </button>
+            
+            <!-- Botón agregar al carrito -->
             {% if product.stock > 0 or product.stock_international > 0 %}
               <button type="button" value="{{ product.id }}" class="btn btn-danger btn-lg" id="add-cart">
                 <i class="bi bi-cart-plus me-2"></i>Agregar al Carrito
@@ -308,6 +314,13 @@ $(document).on('click', '#add-cart', function(e){
       console.log("Error al agregar al carrito");
     }
   });
+});
+</script>
+
+<!-- Script para volver atrás -->
+<script>
+document.getElementById('back-button').addEventListener('click', function() {
+  window.history.back();
 });
 </script>
 
