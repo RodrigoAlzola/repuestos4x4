@@ -38,35 +38,56 @@ def home(request):
         'header_image': header_image,
     })
 
+
 def about(request):
     return render(request, 'about.html', {})
+
 
 def login_user(request):
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(request, username=username, password=password)
+        
         if user is not None:
             login(request, user)
-
-            # Get the save cart
-            current_user = Profile.objects.get(user__id=request.user.id)
-            saved_cart = current_user.old_cart
-            if saved_cart:
-                converted_cart = json.loads(saved_cart)
-                cart = Cart(request)
-
-                for key, value in converted_cart.items():
-                    cart.db_add(product=key, quantity=value)
-
-
-            messages.success(request, ('You have been logged in!'))
+            
+            # Recuperar carrito guardado
+            try:
+                profile = Profile.objects.get(user=user)
+                saved_cart = profile.old_cart
+                
+                if saved_cart:
+                    # Intentar convertir el JSON
+                    try:
+                        converted_cart = json.loads(saved_cart)
+                    except (json.JSONDecodeError, ValueError, TypeError) as e:
+                        print(f"Error decodificando carrito: {e}")
+                        print(f"Carrito corrupto: {saved_cart}")
+                        converted_cart = {}
+                        # Limpiar el carrito corrupto
+                        profile.old_cart = ''
+                        profile.save()
+                    
+                    # Restaurar carrito en sesión
+                    cart = Cart(request)
+                    for key, value in converted_cart.items():
+                        cart.db_add(product=key, quantity=value)
+                else:
+                    converted_cart = {}
+                    
+            except Profile.DoesNotExist:
+                # Si no existe profile, crear uno
+                Profile.objects.create(user=user)
+            
+            messages.success(request, "Has iniciado sesión correctamente")
             return redirect('home')
         else:
-            messages.success(request, ('There was an error, please try again.'))
+            messages.error(request, "Error al iniciar sesión. Verifica tus credenciales.")
             return redirect('login')
     else:
         return render(request, 'login.html', {})
+
 
 def logout_user(request):
     logout(request)
