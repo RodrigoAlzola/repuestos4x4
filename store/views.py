@@ -15,6 +15,7 @@ from cart.cart import Cart
 from django.views.decorators.cache import never_cache
 from store.emails import send_registration_email_async
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 
 
 # Create your views here.
@@ -373,6 +374,7 @@ def all_products(request):
     selected_brand = request.GET.get('brand')
     selected_model = request.GET.get('model')
     selected_serie = request.GET.get('serie')
+    selected_stock_type = request.GET.get('stock_type')
     search_query = request.GET.get('search', '')
 
     # Base de productos con stock
@@ -385,6 +387,12 @@ def all_products(request):
             Q(description__icontains=search_query) |
             Q(sku__icontains=search_query)
         )
+
+    # NUEVO: Filtro de tipo de stock
+    if selected_stock_type == 'nacional':
+        products = products.filter(stock__gt=0)
+    elif selected_stock_type == 'internacional':
+        products = products.filter(stock_international__gt=0, stock=0)
 
     # Aplicar filtros
     if selected_category:
@@ -504,11 +512,10 @@ def all_products(request):
         'selected_brand': selected_brand,
         'selected_model': selected_model,
         'selected_serie': selected_serie,
+        'selected_stock_type': selected_stock_type,
         'search_query': search_query,
     })
 
-
-from django.http import JsonResponse
 
 @never_cache
 def get_dynamic_filters(request):
@@ -518,13 +525,20 @@ def get_dynamic_filters(request):
     selected_brand = request.GET.get('brand')
     selected_model = request.GET.get('model')
     selected_serie = request.GET.get('serie')
+    selected_stock_type = request.GET.get('stock_type')  # Ya lo tienes
 
     # Base de productos con stock
     base_products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
 
-    # 1. CATEGORÍAS DINÁMICAS (filtradas por compatibilidad)
+    # APLICAR FILTRO DE STOCK PRIMERO
+    if selected_stock_type == 'nacional':
+        base_products = base_products.filter(stock__gt=0)
+    elif selected_stock_type == 'internacional':
+        base_products = base_products.filter(stock_international__gt=0, stock=0)
+
+    # 1. CATEGORÍAS DINÁMICAS (filtradas por compatibilidad Y stock)
     if selected_brand or selected_model or selected_serie:
-        filtered_products = base_products
+        filtered_products = base_products  # Usa base_products que ya tiene filtro de stock
         
         if selected_brand:
             filtered_products = filtered_products.filter(compatibilities__brand=selected_brand)
@@ -536,10 +550,12 @@ def get_dynamic_filters(request):
         category_ids = filtered_products.values_list('category_id', flat=True).distinct()
         categories = list(Category.objects.filter(id__in=category_ids).values('id', 'name').order_by('name'))
     else:
-        categories = list(Category.objects.exclude(name__in=['BRAKE GR SPORT & ROGUE', 'WHEEL']).values('id', 'name').order_by('name'))
+        # Categorías basadas en stock
+        category_ids = base_products.values_list('category_id', flat=True).distinct()
+        categories = list(Category.objects.filter(id__in=category_ids).exclude(name__in=['BRAKE GR SPORT & ROGUE', 'WHEEL']).values('id', 'name').order_by('name'))
 
-    # 2. SUBCATEGORÍAS DINÁMICAS
-    subcategories_query = base_products
+    # 2. SUBCATEGORÍAS DINÁMICAS (con filtro de stock)
+    subcategories_query = base_products  # Usa base_products
     
     if selected_category:
         subcategories_query = subcategories_query.filter(category__name=selected_category)
@@ -560,9 +576,9 @@ def get_dynamic_filters(request):
         .order_by('subcategory')
     )
 
-    # 3. COMPATIBILIDADES DINÁMICAS (filtradas por categoría)
+    # 3. COMPATIBILIDADES DINÁMICAS (filtradas por categoría Y stock)
     if selected_category or selected_subcategory:
-        filtered_products = base_products
+        filtered_products = base_products  # Usa base_products
         
         if selected_category:
             filtered_products = filtered_products.filter(category__name=selected_category)
@@ -578,8 +594,11 @@ def get_dynamic_filters(request):
             .order_by('brand', 'model', 'serie')
         )
     else:
+        # Compatibilidades basadas en stock
+        compat_ids = base_products.values_list('compatibilities__id', flat=True).distinct()
         unique_compatibilities = (
             Compatibility.objects
+            .filter(id__in=compat_ids)
             .values('brand', 'model', 'serie')
             .distinct()
             .order_by('brand', 'model', 'serie')

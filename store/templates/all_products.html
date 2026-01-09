@@ -18,6 +18,14 @@
       <form method="get" id="filter-form">
         <h5>Buscar productos</h5>
         <input type="text" name="search" class="form-control mb-3" placeholder="Buscar por nombre o descripción" value="{{ search_query }}">
+
+        <!-- NUEVO: Filtro de tipo de stock -->
+        <h5>Tipo de Stock</h5>
+        <select name="stock_type" id="stock-type-select" class="form-select mb-3">
+          <option value="">-- Todos --</option>
+          <option value="nacional" {% if selected_stock_type == 'nacional' %}selected{% endif %}>Stock Nacional</option>
+          <option value="internacional" {% if selected_stock_type == 'internacional' %}selected{% endif %}>Stock Internacional</option>
+        </select>
         <br>
 
         <h5>Filtrar por compatibilidad</h5>
@@ -176,7 +184,8 @@ jQuery(document).ready(function($) {
       subcategory: subcategorySelect.value,
       brand: brandSelect.value,
       model: modelSelect.value,
-      serie: serieSelect.value
+      serie: serieSelect.value,
+      stock_type: document.getElementById('stock-type-select').value
     });
 
     $.ajax({
@@ -308,6 +317,10 @@ jQuery(document).ready(function($) {
   subcategorySelect.addEventListener('change', function() {
     updateFiltersAjax();
   });
+
+  document.getElementById('stock-type-select').addEventListener('change', function() {
+  updateFiltersAjax();
+})
 
   // ===== GUARDAR SCROLL AL ENVIAR FORMULARIO =====
   document.getElementById('filter-form').addEventListener('submit', function() {
