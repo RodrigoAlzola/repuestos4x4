@@ -16,6 +16,7 @@ urlpatterns = [
     path('product/<int:pk>', views.product, name='product'),
     path('category/<str:foo>', views.category, name='category'),
     path('all_products/', views.all_products, name='all_products'),
+    path('get-dynamic-filters/', views.get_dynamic_filters, name='get_dynamic_filters'),
     path('category_summary/', views.category_summary, name='category_summary'),
     path('search/', views.search, name='search'),
 ]

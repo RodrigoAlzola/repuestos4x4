@@ -18,22 +18,7 @@
       <form method="get" id="filter-form">
         <h5>Buscar productos</h5>
         <input type="text" name="search" class="form-control mb-3" placeholder="Buscar por nombre o descripción" value="{{ search_query }}">
-
-        <h5>Filtrar por categoría</h5>
-        <select name="category" id="category-select" class="form-select mb-2">
-          <option value="">-- Todas --</option>
-          {% for cat in categories %}
-            <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-          {% endfor %}
-        </select>
-
-        <label>Subcategoría:</label>
-        <select name="subcategory" id="subcategory-select" class="form-select mb-3">
-          <option value="">-- Todas --</option>
-          {% for subcat in subcategories %}
-            <option value="{{ subcat }}" {% if selected_subcategory == subcat %}selected{% endif %}>{{ subcat }}</option>
-          {% endfor %}
-        </select>
+        <br>
 
         <h5>Filtrar por compatibilidad</h5>
         <label>Marca:</label>
@@ -50,8 +35,26 @@
         <select name="serie" id="serie-select" class="form-select mb-3" disabled>
           <option value="">-- Todas --</option>
         </select>
+        <br>
 
-        <button type="submit" class="btn btn-primary w-100">Aplicar filtros</button>
+        <h5>Filtrar por categoría</h5>
+        <select name="category" id="category-select" class="form-select mb-2">
+          <option value="">-- Todas --</option>
+          {% for cat in categories %}
+            <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+
+        <label>Subcategoría:</label>
+        <select name="subcategory" id="subcategory-select" class="form-select mb-3">
+          <option value="">-- Todas --</option>
+          {% for subcat in subcategories %}
+            <option value="{{ subcat }}" {% if selected_subcategory == subcat %}selected{% endif %}>{{ subcat }}</option>
+          {% endfor %}
+        </select>
+        
+        <br>
+        <button type="submit" class="btn btn-danger w-100">Aplicar filtros</button>
         <button type="button" id="clear-filters" class="btn btn-secondary w-100 mt-2">Limpiar filtros</button>
         <br><br>
       </form>
@@ -117,7 +120,7 @@
             <div class="mt-auto">
                 <a href="{% url 'product' product.id %}" class="btn btn-outline-dark w-100 mb-2">Ver más</a>
                 {% if product.stock > 0 or product.stock_international > 0 %}
-                    <button class="btn btn-success w-100 add-to-cart-btn" 
+                    <button class="btn btn-danger w-100 add-to-cart-btn" 
                             data-product-id="{{ product.id }}"
                             data-max-stock="{% if product.stock > 0 %}{{ product.stock }}{% else %}{{ product.stock_international }}{% endif %}">
                         <i class="bi bi-cart-plus"></i> Agregar al carrito
@@ -143,12 +146,14 @@
 
 <script>
 jQuery(document).ready(function($) {
-  const compatData = {{ compat_data|safe }};
   const brandSelect = document.getElementById('brand-select');
   const modelSelect = document.getElementById('model-select');
   const serieSelect = document.getElementById('serie-select');
   const categorySelect = document.getElementById('category-select');
   const subcategorySelect = document.getElementById('subcategory-select');
+
+  let compatData = {{ compat_data|safe }};
+  let isUpdating = false; // Bandera para evitar loops
 
   // ===== MANTENER POSICIÓN DEL SCROLL =====
   if ('scrollRestoration' in history) {
@@ -161,16 +166,82 @@ jQuery(document).ready(function($) {
     sessionStorage.removeItem('scrollPos');
   }
 
-  // Cargar marcas
-  for (const brand in compatData) {
-    const option = document.createElement('option');
-    option.value = brand;
-    option.textContent = brand;
-    if (brand === "{{ selected_brand }}") option.selected = true;
-    brandSelect.appendChild(option);
+  // ===== FUNCIÓN PARA ACTUALIZAR FILTROS CON AJAX =====
+  function updateFiltersAjax() {
+    if (isUpdating) return;
+    isUpdating = true;
+
+    const params = new URLSearchParams({
+      category: categorySelect.value,
+      subcategory: subcategorySelect.value,
+      brand: brandSelect.value,
+      model: modelSelect.value,
+      serie: serieSelect.value
+    });
+
+    $.ajax({
+      url: "{% url 'get_dynamic_filters' %}?" + params.toString(),
+      type: 'GET',
+      success: function(data) {
+        // Guardar valores actuales
+        const currentCategory = categorySelect.value;
+        const currentSubcategory = subcategorySelect.value;
+        const currentBrand = brandSelect.value;
+        const currentModel = modelSelect.value;
+        const currentSerie = serieSelect.value;
+
+        // Actualizar categorías
+        categorySelect.innerHTML = '<option value="">-- Todas --</option>';
+        data.categories.forEach(cat => {
+          const option = new Option(cat.name, cat.name);
+          if (cat.name === currentCategory) option.selected = true;
+          categorySelect.add(option);
+        });
+
+        // Actualizar subcategorías
+        subcategorySelect.innerHTML = '<option value="">-- Todas --</option>';
+        data.subcategories.forEach(subcat => {
+          const option = new Option(subcat, subcat);
+          if (subcat === currentSubcategory) option.selected = true;
+          subcategorySelect.add(option);
+        });
+
+        // Actualizar compatibilidades
+        compatData = data.compat_data;
+        
+        // Actualizar marcas
+        brandSelect.innerHTML = '<option value="">-- Todas --</option>';
+        for (const brand in compatData) {
+          const option = new Option(brand, brand);
+          if (brand === currentBrand) option.selected = true;
+          brandSelect.add(option);
+        }
+
+        // Recargar modelos y series según marca actual
+        if (currentBrand && compatData[currentBrand]) {
+          loadModels(currentBrand, currentModel);
+          if (currentModel && compatData[currentBrand][currentModel]) {
+            loadSeries(currentBrand, currentModel, currentSerie);
+          }
+        }
+
+        isUpdating = false;
+      },
+      error: function() {
+        console.error('Error al actualizar filtros');
+        isUpdating = false;
+      }
+    });
   }
 
-  function loadModels(brand) {
+  // ===== CARGAR MARCAS INICIALES =====
+  for (const brand in compatData) {
+    const option = new Option(brand, brand);
+    if (brand === "{{ selected_brand }}") option.selected = true;
+    brandSelect.add(option);
+  }
+
+  function loadModels(brand, selectedModel = null) {
     modelSelect.innerHTML = '<option value="">-- Todas --</option>';
     serieSelect.innerHTML = '<option value="">-- Todas --</option>';
     serieSelect.disabled = true;
@@ -182,15 +253,13 @@ jQuery(document).ready(function($) {
 
     modelSelect.disabled = false;
     for (const model in compatData[brand]) {
-      const option = document.createElement('option');
-      option.value = model;
-      option.textContent = model;
-      if (model === "{{ selected_model }}") option.selected = true;
-      modelSelect.appendChild(option);
+      const option = new Option(model, model);
+      if (model === selectedModel || model === "{{ selected_model }}") option.selected = true;
+      modelSelect.add(option);
     }
   }
 
-  function loadSeries(brand, model) {
+  function loadSeries(brand, model, selectedSerie = null) {
     serieSelect.innerHTML = '<option value="">-- Todas --</option>';
     
     if (!brand || !model || !compatData[brand] || !compatData[brand][model]) {
@@ -200,22 +269,13 @@ jQuery(document).ready(function($) {
     
     serieSelect.disabled = false;
     compatData[brand][model].forEach(serie => {
-      const option = document.createElement('option');
-      option.value = serie;
-      option.textContent = serie;
-      if (serie === "{{ selected_serie }}") option.selected = true;
-      serieSelect.appendChild(option);
+      const option = new Option(serie, serie);
+      if (serie === selectedSerie || serie === "{{ selected_serie }}") option.selected = true;
+      serieSelect.add(option);
     });
   }
 
-  brandSelect.addEventListener('change', () => {
-    loadModels(brandSelect.value);
-  });
-
-  modelSelect.addEventListener('change', () => {
-    loadSeries(brandSelect.value, modelSelect.value);
-  });
-
+  // ===== INICIALIZAR SI HAY VALORES SELECCIONADOS =====
   const selectedBrand = "{{ selected_brand }}";
   const selectedModel = "{{ selected_model }}";
   
@@ -226,22 +286,37 @@ jQuery(document).ready(function($) {
     }
   }
 
-  // Guardar posición al enviar formulario
+  // ===== EVENT LISTENERS PARA ACTUALIZAR FILTROS CON AJAX =====
+  brandSelect.addEventListener('change', function() {
+    loadModels(this.value);
+    updateFiltersAjax();
+  });
+
+  modelSelect.addEventListener('change', function() {
+    loadSeries(brandSelect.value, this.value);
+    updateFiltersAjax();
+  });
+
+  serieSelect.addEventListener('change', function() {
+    updateFiltersAjax();
+  });
+
+  categorySelect.addEventListener('change', function() {
+    updateFiltersAjax();
+  });
+
+  subcategorySelect.addEventListener('change', function() {
+    updateFiltersAjax();
+  });
+
+  // ===== GUARDAR SCROLL AL ENVIAR FORMULARIO =====
   document.getElementById('filter-form').addEventListener('submit', function() {
     sessionStorage.setItem('scrollPos', window.pageYOffset || document.documentElement.scrollTop);
   });
 
-  // Limpiar filtros
+  // ===== LIMPIAR FILTROS =====
   document.getElementById('clear-filters').addEventListener('click', function() {
     sessionStorage.removeItem('scrollPos');
-    categorySelect.value = '';
-    subcategorySelect.value = '';
-    brandSelect.value = '';
-    modelSelect.value = '';
-    modelSelect.disabled = true;
-    serieSelect.value = '';
-    serieSelect.disabled = true;
-    document.querySelector('input[name="search"]').value = '';
     window.location.href = window.location.pathname;
   });
 
@@ -258,8 +333,6 @@ jQuery(document).ready(function($) {
     
     const button = $(this);
     const productId = button.data('product-id');
-    
-    console.log('Agregando producto:', productId);
     
     button.prop('disabled', true);
     const originalText = button.html();
@@ -278,7 +351,7 @@ jQuery(document).ready(function($) {
         $('#cart_quantity').text(json.quantity);
         
         button.html('<i class="bi bi-check-circle"></i> Agregado');
-        button.removeClass('btn-success').addClass('btn-primary');
+        button.removeClass('btn-success btn-danger').addClass('btn-primary');
         
         setTimeout(function() {
           button.html(originalText);
@@ -291,7 +364,7 @@ jQuery(document).ready(function($) {
       error: function(xhr, errmsg, err) {
         console.error("Error:", errmsg);
         button.html('<i class="bi bi-x-circle"></i> Error');
-        button.removeClass('btn-success').addClass('btn-danger');
+        button.removeClass('btn-success btn-danger').addClass('btn-danger');
         
         setTimeout(function() {
           button.html(originalText);

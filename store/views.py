@@ -427,7 +427,7 @@ def all_products(request):
         category_ids = filtered_products.values_list('category_id', flat=True).distinct()
         categories = Category.objects.filter(id__in=category_ids).order_by('name')
     else:
-        categories = Category.objects.all().order_by('name')
+        categories = Category.objects.exclude(name__in=['BRAKE GR SPORT & ROGUE', 'WHEEL']).order_by('name')
 
     # 2. SUBCATEGORÍAS DINÁMICAS
     subcategories_query = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
@@ -505,6 +505,106 @@ def all_products(request):
         'selected_model': selected_model,
         'selected_serie': selected_serie,
         'search_query': search_query,
+    })
+
+
+from django.http import JsonResponse
+
+@never_cache
+def get_dynamic_filters(request):
+    """Vista AJAX para obtener filtros dinámicos sin recargar productos"""
+    selected_category = request.GET.get('category')
+    selected_subcategory = request.GET.get('subcategory')
+    selected_brand = request.GET.get('brand')
+    selected_model = request.GET.get('model')
+    selected_serie = request.GET.get('serie')
+
+    # Base de productos con stock
+    base_products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
+
+    # 1. CATEGORÍAS DINÁMICAS (filtradas por compatibilidad)
+    if selected_brand or selected_model or selected_serie:
+        filtered_products = base_products
+        
+        if selected_brand:
+            filtered_products = filtered_products.filter(compatibilities__brand=selected_brand)
+        if selected_model:
+            filtered_products = filtered_products.filter(compatibilities__model=selected_model)
+        if selected_serie:
+            filtered_products = filtered_products.filter(compatibilities__serie=selected_serie)
+        
+        category_ids = filtered_products.values_list('category_id', flat=True).distinct()
+        categories = list(Category.objects.filter(id__in=category_ids).values('id', 'name').order_by('name'))
+    else:
+        categories = list(Category.objects.exclude(name__in=['BRAKE GR SPORT & ROGUE', 'WHEEL']).values('id', 'name').order_by('name'))
+
+    # 2. SUBCATEGORÍAS DINÁMICAS
+    subcategories_query = base_products
+    
+    if selected_category:
+        subcategories_query = subcategories_query.filter(category__name=selected_category)
+    
+    if selected_brand:
+        subcategories_query = subcategories_query.filter(compatibilities__brand=selected_brand)
+    if selected_model:
+        subcategories_query = subcategories_query.filter(compatibilities__model=selected_model)
+    if selected_serie:
+        subcategories_query = subcategories_query.filter(compatibilities__serie=selected_serie)
+    
+    subcategories = list(
+        subcategories_query
+        .exclude(subcategory__isnull=True)
+        .exclude(subcategory='')
+        .values_list('subcategory', flat=True)
+        .distinct()
+        .order_by('subcategory')
+    )
+
+    # 3. COMPATIBILIDADES DINÁMICAS (filtradas por categoría)
+    if selected_category or selected_subcategory:
+        filtered_products = base_products
+        
+        if selected_category:
+            filtered_products = filtered_products.filter(category__name=selected_category)
+        if selected_subcategory:
+            filtered_products = filtered_products.filter(subcategory=selected_subcategory)
+        
+        compat_ids = filtered_products.values_list('compatibilities__id', flat=True).distinct()
+        unique_compatibilities = (
+            Compatibility.objects
+            .filter(id__in=compat_ids)
+            .values('brand', 'model', 'serie')
+            .distinct()
+            .order_by('brand', 'model', 'serie')
+        )
+    else:
+        unique_compatibilities = (
+            Compatibility.objects
+            .values('brand', 'model', 'serie')
+            .distinct()
+            .order_by('brand', 'model', 'serie')
+        )
+
+    # Construir compat_data
+    compat_data = {}
+    for comp in unique_compatibilities:
+        brand = comp['brand'].strip()
+        model = comp['model'].strip()
+        serie = comp['serie'].strip()
+        
+        if brand not in compat_data:
+            compat_data[brand] = {}
+        
+        if model not in compat_data[brand]:
+            compat_data[brand][model] = []
+        
+        if serie not in compat_data[brand][model]:
+            compat_data[brand][model].append(serie)
+
+    return JsonResponse({
+        'categories': categories,
+        'subcategories': subcategories,
+        'compat_data': compat_data,
     })
 
 
