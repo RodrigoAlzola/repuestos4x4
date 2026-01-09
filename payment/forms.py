@@ -16,7 +16,7 @@ from .models import ShippingAddress
 class ShippingForm(forms.ModelForm):
     class Meta:
         model = ShippingAddress
-        fields = ['full_name', 'email', 'phone', 'address1', 'address2', 
+        fields = ['full_name', 'email', 'phone', 'id_number', 'address1', 'address2', 
                   'city', 'commune', 'region', 'zipcode', 'country', 'notes']
         widgets = {
             'full_name': forms.TextInput(attrs={
@@ -30,6 +30,10 @@ class ShippingForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={
                 'class': 'form-control', 
                 'placeholder': '+56 9 1234 5678'
+            }),
+            'id_number': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'RUT (ej: 12345678-9)'
             }),
             'address1': forms.TextInput(attrs={
                 'class': 'form-control', 
@@ -72,6 +76,7 @@ class ShippingForm(forms.ModelForm):
 
 class PaymentForm(forms.Form):
     card_name = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Card Name'}), required=True)
+    card_id_number = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'RUT (ej: 12345678-9)'}), required=True)
     card_number = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Card Number'}), required=True)
     card_exp_date = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Expiration Date'}), required=True)
     card_cvv_number = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': ' CVV'}), required=True)

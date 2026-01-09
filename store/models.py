@@ -3,12 +3,15 @@ import datetime
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 
+from payment.validators import validar_rut
+
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100, blank=False)
     date_modified = models.DateTimeField(User, auto_now=True)
     phone = models.CharField(max_length=20, blank=False)
+    id_number = models.CharField(max_length=10, default='', validators=[validar_rut], help_text='Rut: 12345678-9')
     email = models.EmailField(max_length=100, blank=False)
     address1 = models.CharField(max_length=200, blank=True)
     address2 = models.CharField(max_length=200, blank=True)
@@ -111,6 +114,7 @@ class GuestUser(models.Model):
     date = models.DateTimeField(auto_now=True)
     phone = models.CharField(max_length=20, blank=False)
     email = models.EmailField(max_length=100, blank=False)
+    id_number = models.CharField(max_length=10, default='', validators=[validar_rut], help_text='Rut: 12345678-9')
     address1 = models.CharField(max_length=200, blank=False)
     address2 = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=200, blank=False)

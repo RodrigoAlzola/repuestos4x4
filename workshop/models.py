@@ -9,6 +9,7 @@ class Workshop(models.Model):
     contact_name = models.CharField(max_length=50, blank=False)
     phone = models.CharField(max_length=20, blank=False)
     email = models.CharField(max_length=20, blank=True)
+    id_number = models.CharField(max_length=10, default='')
     address1 = models.CharField(max_length=200, blank=True)
     address2 = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=200, blank=True)

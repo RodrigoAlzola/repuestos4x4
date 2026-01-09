@@ -64,6 +64,7 @@
                                     <small class="text-muted">
                                         <i class="bi bi-envelope me-1"></i>{{ address.email }}<br>
                                         <i class="bi bi-telephone me-1"></i>{{ address.phone }}<br>
+                                        <i class="bi bi-card-text me-1"></i>RUT: {{ address.id_number }}<br>
                                         <i class="bi bi-house me-1"></i>{{ address.address1 }}
                                         {% if address.address2 %}, {{ address.address2 }}{% endif %}<br>
                                         {{ address.commune }}, {{ address.city }}
@@ -139,8 +140,8 @@
                     {{ shipping_form_new.phone }}
                 </div>
                 <div class="col-md-6 mb-3">
-                    {{ shipping_form_new.city.label_tag }}
-                    {{ shipping_form_new.city }}
+                    {{ shipping_form_new.id_number.label_tag }}
+                    {{ shipping_form_new.id_number }}
                 </div>
             </div>
             
@@ -152,13 +153,20 @@
             </div>
             
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md- mb-3">
                     {{ shipping_form_new.address2.label_tag }}
                     {{ shipping_form_new.address2 }}
                 </div>
+            </div>
+
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     {{ shipping_form_new.commune.label_tag }}
                     {{ shipping_form_new.commune }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ shipping_form_new.city.label_tag }}
+                    {{ shipping_form_new.city }}
                 </div>
             </div>
             
@@ -232,8 +240,8 @@
                 {{ shipping_form_new.phone }}
             </div>
             <div class="col-md-6 mb-3">
-                {{ shipping_form_new.city.label_tag }}
-                {{ shipping_form_new.city }}
+                {{ shipping_form_new.id_number.label_tag }}
+                {{ shipping_form_new.id_number }}
             </div>
         </div>
         
@@ -245,13 +253,20 @@
         </div>
         
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-12 mb-3">
                 {{ shipping_form_new.address2.label_tag }}
                 {{ shipping_form_new.address2 }}
             </div>
+        </div>
+
+        <div class="row">
             <div class="col-md-6 mb-3">
                 {{ shipping_form_new.commune.label_tag }}
                 {{ shipping_form_new.commune }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ shipping_form_new.city.label_tag }}
+                {{ shipping_form_new.city }}
             </div>
         </div>
         

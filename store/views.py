@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import Product, Category, Profile, Compatibility
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -15,7 +15,7 @@ from cart.cart import Cart
 from django.views.decorators.cache import never_cache
 from store.emails import send_registration_email_async
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
+
 
 # Create your views here.
 def home(request):
@@ -131,6 +131,7 @@ def update_user(request):
         messages.success(request, "You must been Logged in to access the Update page.")
         return redirect('home')
 
+
 def update_password(request):
     if request.user.is_authenticated:
         current_user = request.user
@@ -153,13 +154,6 @@ def update_password(request):
     else:
         messages.success(request, "You must been Logged in to access that page.")
         return redirect('home')
-    
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from store.models import Profile
-from payment.models import ShippingAddress
-from payment.forms import ShippingForm
 
 @login_required
 def update_info(request):

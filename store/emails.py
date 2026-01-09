@@ -168,7 +168,8 @@ def send_order_confirmation_email(order):
                 <p>
                     <strong>Nombre:</strong> {order.full_name}<br>
                     <strong>Email:</strong> {order.email}<br>
-                    <strong>Teléfono:</strong> {order.phone}
+                    <strong>Teléfono:</strong> {order.phone}<br>
+                    <strong>Rut:</strong> {order.id_number}
                 </p>
                 
                 <h3>Dirección de Envío</h3>
@@ -309,7 +310,8 @@ def send_provider_order_notification(order):
                     <p>
                         <strong>Nombre:</strong> {order.full_name}<br>
                         <strong>Email:</strong> {order.email}<br>
-                        <strong>Teléfono:</strong> {order.phone}
+                        <strong>Teléfono:</strong> {order.phone}<br>
+                        <strong>Rut:</strong> {order.id_number}
                     </p>
                     
                     <h3>Dirección de Envío</h3>

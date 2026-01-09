@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from store.models import Product
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from payment.validators import validar_rut
 import datetime
 
 class ShippingAddress(models.Model):
@@ -10,6 +11,7 @@ class ShippingAddress(models.Model):
     full_name = models.CharField(max_length=255)
     email = models.EmailField(max_length=255)
     phone = models.CharField(max_length=20)
+    id_number = models.CharField(max_length=10, default='', validators=[validar_rut], help_text='Formato: 12345678-9')
     address1 = models.CharField(max_length=255)
     address2 = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=100)
@@ -63,6 +65,7 @@ class Order(models.Model):
     full_name = models.CharField(max_length=250)
     email = models.EmailField(max_length=250)
     phone = models.CharField(max_length=20)
+    id_number = models.CharField(max_length=10, default='', validators=[validar_rut], help_text='Formato: 12345678-9')
     
     # Información de envío (puede ser domicilio o taller)
     shipping_address = models.TextField(max_length=15000)

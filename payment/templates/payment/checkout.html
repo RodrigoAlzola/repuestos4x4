@@ -112,6 +112,7 @@
                           <p class="mb-0 text-muted small">
                             <i class="bi bi-envelope me-1"></i>{{ address.email }}<br>
                             <i class="bi bi-telephone me-1"></i>{{ address.phone }}<br>
+                            <i class="bi bi-card-text me-1"></i>RUT/ID: {{ address.id_number}}<br>
                             <i class="bi bi-house me-1"></i>{{ address.address1 }}
                             {% if address.address2 %}, {{ address.address2 }}{% endif %}<br>
                             {{ address.commune }}, {{ address.city }}
@@ -170,8 +171,8 @@
                             {{ shipping_form.phone }}
                           </div>
                           <div class="col-md-6 mb-2">
-                            {{ shipping_form.city.label_tag }}
-                            {{ shipping_form.city }}
+                              {{ shipping_form.id_number.label_tag }}
+                              {{ shipping_form.id_number }}
                           </div>
                         </div>
                         
@@ -181,13 +182,20 @@
                         </div>
                         
                         <div class="row">
-                          <div class="col-md-6 mb-2">
+                          <div class="col-md-12 mb-2">
                             {{ shipping_form.address2.label_tag }}
                             {{ shipping_form.address2 }}
                           </div>
+                        </div>
+
+                        <div class="row">
                           <div class="col-md-6 mb-2">
                             {{ shipping_form.commune.label_tag }}
                             {{ shipping_form.commune }}
+                          </div>
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.city.label_tag }}
+                            {{ shipping_form.city }}
                           </div>
                         </div>
                         
@@ -266,15 +274,22 @@
                   </div>
                   
                   <div class="row">
-                    <div class="col-md-6 mb-2">
-                      {{ shipping_form.address2.label_tag }}
-                      {{ shipping_form.address2 }}
-                    </div>
-                    <div class="col-md-6 mb-2">
-                      {{ shipping_form.commune.label_tag }}
-                      {{ shipping_form.commune }}
-                    </div>
-                  </div>
+                          <div class="col-md-12 mb-2">
+                            {{ shipping_form.address2.label_tag }}
+                            {{ shipping_form.address2 }}
+                          </div>
+                        </div>
+
+                        <div class="row">
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.commune.label_tag }}
+                            {{ shipping_form.commune }}
+                          </div>
+                          <div class="col-md-6 mb-2">
+                            {{ shipping_form.city.label_tag }}
+                            {{ shipping_form.city }}
+                          </div>
+                        </div>
                   
                   <div class="row">
                     <div class="col-md-4 mb-2">
@@ -344,6 +359,7 @@
               <div class="mb-2">{{ guest_user_form.full_name.label_tag }} {{ guest_user_form.full_name }}</div>
               <div class="mb-2">{{ guest_user_form.phone.label_tag }} {{ guest_user_form.phone }}</div>
               <div class="mb-3">{{ guest_user_form.email.label_tag }} {{ guest_user_form.email }}</div>
+              <div class="mb-2">{{ guest_user_form.id_number.label_tag }} {{ guest_user_form.id_number }}</div>
               <div class="mb-2">{{ guest_user_form.address1.label_tag }} {{ guest_user_form.address1 }}</div>
               <div class="mb-2">{{ guest_user_form.address2.label_tag }} {{ guest_user_form.address2 }}</div>
               <div class="mb-2">{{ guest_user_form.city.label_tag }} {{ guest_user_form.city }}</div>

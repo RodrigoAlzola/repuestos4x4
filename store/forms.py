@@ -82,6 +82,7 @@ class ChangePasswordForm(SetPasswordForm):
 
 class UserInfoForm(forms.ModelForm):
 	phone = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}), required=False)
+	id_number = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'RUT (ej: 12345678-9)'}), required=False)
 	address1 = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address1'}), required=False)
 	address2 = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address2'}), required=False)
 	city = forms.CharField(label="", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}), required=False)
@@ -92,7 +93,7 @@ class UserInfoForm(forms.ModelForm):
 
 	class Meta:
 		model = Profile
-		fields = ('phone', 'address1', 'address2', 'city', 'state', 'commune', 'zipcode', 'country',)
+		fields = ('phone', 'id', 'address1', 'address2', 'city', 'state', 'commune', 'zipcode', 'country',)
 
 
 class GuestUserForm(forms.ModelForm):
@@ -102,6 +103,7 @@ class GuestUserForm(forms.ModelForm):
             'full_name',
             'phone',
             'email',
+			'id_number',
             'address1',
             'address2',
             'city',
@@ -114,6 +116,7 @@ class GuestUserForm(forms.ModelForm):
             'full_name': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
+			'id_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'RUT (ej: 12345678-9)'}),
             'address1': forms.TextInput(attrs={'class': 'form-control'}),
             'address2': forms.TextInput(attrs={'class': 'form-control'}),
             'city': forms.TextInput(attrs={'class': 'form-control'}),

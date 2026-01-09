@@ -73,6 +73,7 @@ def checkout(request):
                     'shipping_full_name': selected_workshop.name,
                     'shipping_phone': '',
                     'shipping_email': '',
+                    'shipping_id_number': selected_workshop.id_number,
                     'shipping_address1': selected_workshop.address1,
                     'shipping_address2': selected_workshop.address2,
                     'shipping_city': selected_workshop.city,
@@ -121,6 +122,7 @@ def checkout(request):
                             'shipping_full_name': selected_address.full_name,
                             'shipping_phone': selected_address.phone,
                             'shipping_email': selected_address.email,
+                            'shipping_id_number': selected_address.id_number,
                             'shipping_address1': selected_address.address1,
                             'shipping_address2': selected_address.address2 or '',
                             'shipping_city': selected_address.city,
@@ -171,6 +173,7 @@ def checkout(request):
                             'shipping_full_name': new_address.full_name,
                             'shipping_phone': new_address.phone,
                             'shipping_email': new_address.email,
+                            'shipping_id_number': new_address.id_number,
                             'shipping_address1': new_address.address1,
                             'shipping_address2': new_address.address2 or '',
                             'shipping_city': new_address.city,
@@ -227,6 +230,7 @@ def checkout(request):
                 'shipping_full_name': guest_data['full_name'],
                 'shipping_phone': guest_data['phone'],
                 'shipping_email': guest_data['email'],
+                'shipping_id_number': guest_data['id_number'],
                 'shipping_address1': guest_data['address1'],
                 'shipping_address2': guest_data['address2'],
                 'shipping_city': guest_data['city'],
@@ -306,7 +310,7 @@ def billing_info(request):
         # Generar un buy_order único
         timestamp = datetime.now().strftime('%Y%m%d')
         unique_id = str(uuid.uuid4())[:8].upper()
-        buy_order = f"4X4-{timestamp}-{unique_id}"
+        buy_order = f"{timestamp}-{unique_id}"
 
         # ===== PROCESAR PAGO CON TRANSBANK =====
         payment_method = request.POST.get('payment_method', 'webpay')
@@ -586,7 +590,7 @@ def create_order_from_session(request, transaction_response=None):
     full_name = shipping.get('shipping_full_name', '')
     email = shipping.get('shipping_email', '')
     phone = shipping.get('shipping_phone', '')
-    
+    id_number = shipping.get('shipping_id_number', '')
     shipping_address = "\n".join(filter(None, [
         shipping.get('shipping_address1', ''),
         shipping.get('shipping_address2', ''),
@@ -618,6 +622,7 @@ def create_order_from_session(request, transaction_response=None):
         full_name=full_name,
         email=email,
         phone=phone,
+        id_number=id_number,
         shipping_address=shipping_address,
         amount_pay=amount_pay,
         workshop=workshop,
