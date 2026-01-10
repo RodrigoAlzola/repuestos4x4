@@ -111,13 +111,52 @@
                 {% endfor %}
               </tbody>
               <tfoot>
-                <tr class="table-active">
-                  <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                  <td class="text-end"><strong class="text-success fs-5">$ {{ order.amount_pay|currency_format }}</strong></td>
-                </tr>
+                {% if order.coupon %}
+                  <!-- Mostrar subtotal y descuento -->
+                  <tr>
+                    <td colspan="3" class="text-end">Subtotal:</td>
+                    <td class="text-end">$ {{ order.amount_before_discount|currency_format }}</td>
+                  </tr>
+                  <tr class="table-success">
+                    <td colspan="3" class="text-end">
+                      <i class="bi bi-ticket-perforated me-2"></i>Descuento ({{ order.coupon.code }}):
+                    </td>
+                    <td class="text-end text-success">-$ {{ order.coupon_discount|currency_format }}</td>
+                  </tr>
+                  <tr class="table-active">
+                    <td colspan="3" class="text-end"><strong>Total Pagado:</strong></td>
+                    <td class="text-end"><strong class="text-success fs-5">$ {{ order.amount_pay|currency_format }}</strong></td>
+                  </tr>
+                {% else %}
+                  <!-- Sin cupón, mostrar solo total -->
+                  <tr class="table-active">
+                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                    <td class="text-end"><strong class="text-success fs-5">$ {{ order.amount_pay|currency_format }}</strong></td>
+                  </tr>
+                {% endif %}
               </tfoot>
             </table>
           </div>
+          
+          <!-- Información del cupón aplicado -->
+          {% if order.coupon %}
+            <div class="alert alert-success mt-3 mb-0">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-tag-fill me-3 fs-4"></i>
+                <div>
+                  <strong>Cupón Aplicado: {{ order.coupon.code }}</strong>
+                  {% if order.coupon.description %}
+                    <p class="mb-0 mt-1 small">{{ order.coupon.description }}</p>
+                  {% endif %}
+                  <p class="mb-0 mt-1">
+                    <small class="text-muted">
+                      Ahorraste: <strong class="text-success">$ {{ order.coupon_discount|currency_format }}</strong>
+                    </small>
+                  </p>
+                </div>
+              </div>
+            </div>
+          {% endif %}
         </div>
       </div>
 

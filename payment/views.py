@@ -4,7 +4,7 @@ from payment.forms import ShippingForm, PaymentForm
 from payment.models import ShippingAddress
 from django.contrib import messages
 from django.utils import timezone
-from payment.models import Order, OrderItem
+from payment.models import Order, OrderItem, Coupon, CouponUsage
 from django.contrib.auth.models import User
 from store.models import Product, Profile
 from store.forms import GuestUserForm, UserInfoForm
@@ -12,6 +12,7 @@ from workshop.models import Workshop
 import datetime
 import uuid
 from store.emails import send_order_confirmation_email_async, send_provider_order_notification_async
+from django.http import JsonResponse
 
 from transbank.webpay.webpay_plus.transaction import Transaction
 from django.conf import settings
@@ -27,7 +28,37 @@ def checkout(request):
     cart = Cart(request)
     cart_products = cart.get_products()
     quantities = cart.get_quants()
-    total = cart.cart_total()
+    
+    # ===== CUPONES =====
+    coupon_code = request.session.get('coupon_code')
+    coupon_discount = request.session.get('coupon_discount', 0)
+    
+    # Calcular totales
+    cart_total = float(cart.cart_total())
+    total_after_discount = cart_total - coupon_discount
+    
+    # Validar cupón si existe
+    coupon = None
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(code=coupon_code)
+            user = request.user if request.user.is_authenticated else None
+            can_use, message = coupon.can_use(user=user, amount=cart_total)
+            
+            if not can_use:
+                # Cupón ya no es válido, removerlo
+                del request.session['coupon_code']
+                del request.session['coupon_discount']
+                messages.warning(request, f'El cupón ya no es válido: {message}')
+                coupon = None
+                coupon_discount = 0
+                total_after_discount = cart_total
+        except Coupon.DoesNotExist:
+            del request.session['coupon_code']
+            del request.session['coupon_discount']
+            coupon = None
+            coupon_discount = 0
+            total_after_discount = cart_total
 
     personal_info = None
     guest_user_form = None
@@ -95,7 +126,10 @@ def checkout(request):
                     return render(request, "payment/billing_info.html", {
                         "cart_products": cart_products,
                         "quantities": quantities,
-                        "total": total,
+                        "total": total_after_discount,  # CAMBIO: usar total con descuento
+                        "total_original": cart_total,  # NUEVO: total original
+                        "coupon_discount": coupon_discount,  # NUEVO
+                        "coupon": coupon,  # NUEVO
                         "shipping_info": shipping_info,
                         "personal_info": personal_info,
                         "billing_form": billing_form
@@ -139,7 +173,10 @@ def checkout(request):
                         return render(request, "payment/billing_info.html", {
                             "cart_products": cart_products,
                             "quantities": quantities,
-                            "total": total,
+                            "total": total_after_discount,  # CAMBIO
+                            "total_original": cart_total,  # NUEVO
+                            "coupon_discount": coupon_discount,  # NUEVO
+                            "coupon": coupon,  # NUEVO
                             "shipping_info": shipping_info,
                             "personal_info": personal_info,
                             "billing_form": billing_form
@@ -190,7 +227,10 @@ def checkout(request):
                         return render(request, "payment/billing_info.html", {
                             "cart_products": cart_products,
                             "quantities": quantities,
-                            "total": total,
+                            "total": total_after_discount,  # CAMBIO
+                            "total_original": cart_total,  # NUEVO
+                            "coupon_discount": coupon_discount,  # NUEVO
+                            "coupon": coupon,  # NUEVO
                             "shipping_info": shipping_info,
                             "personal_info": personal_info,
                             "billing_form": billing_form
@@ -247,7 +287,10 @@ def checkout(request):
             return render(request, "payment/billing_info.html", {
                 "cart_products": cart_products,
                 "quantities": quantities,
-                "total": total,
+                "total": total_after_discount,  # CAMBIO
+                "total_original": cart_total,  # NUEVO
+                "coupon_discount": coupon_discount,  # NUEVO
+                "coupon": coupon,  # NUEVO
                 "shipping_info": shipping_info,
                 "personal_info": personal_info,
                 "billing_form": billing_form
@@ -257,7 +300,10 @@ def checkout(request):
     return render(request, "payment/checkout.html", {
         "cart_products": cart_products,
         "quantities": quantities,
-        "total": total,
+        "total": cart_total,  # Total original
+        "total_after_discount": total_after_discount,  # NUEVO: Total con descuento
+        "coupon": coupon,  # NUEVO
+        "coupon_discount": coupon_discount,  # NUEVO
         "shipping_form": shipping_form,
         "personal_info": personal_info,
         "is_workshop_shipping": is_workshop_shipping,
@@ -279,7 +325,37 @@ def billing_info(request):
     cart = Cart(request)
     cart_products = cart.get_products()
     quantities = cart.get_quants()
-    total = cart.cart_total()
+    cart_total = cart.cart_total()
+
+    # ===== OBTENER CUPÓN Y CALCULAR TOTAL CON DESCUENTO =====
+    coupon_code = request.session.get('coupon_code')
+    coupon_discount = request.session.get('coupon_discount', 0)
+    
+    # Total final que se pagará
+    total = float(cart_total) - coupon_discount
+    
+    # Validar cupón si existe
+    coupon = None
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(code=coupon_code)
+            user = request.user if request.user.is_authenticated else None
+            can_use, message = coupon.can_use(user=user, amount=cart_total)
+            
+            if not can_use:
+                # Cupón ya no es válido
+                del request.session['coupon_code']
+                del request.session['coupon_discount']
+                messages.warning(request, f'El cupón ya no es válido: {message}')
+                coupon = None
+                coupon_discount = 0
+                total = cart_total
+        except Coupon.DoesNotExist:
+            del request.session['coupon_code']
+            del request.session['coupon_discount']
+            coupon = None
+            coupon_discount = 0
+            total = cart_total
 
     # Validar que hay información de envío en sesión
     shipping_info = request.session.get('shipping_info')
@@ -299,6 +375,9 @@ def billing_info(request):
                 "cart_products": cart_products,
                 "quantities": quantities,
                 "total": total,
+                "total_original": cart_total,
+                "coupon": coupon,
+                "coupon_discount": coupon_discount,
                 "shipping_info": shipping_info,
                 "personal_info": personal_info,
             })
@@ -332,11 +411,11 @@ def billing_info(request):
                         settings.TRANSBANK_API_KEY
                     )
             
-                # Crear transacción SIN crear la orden todavía
+                # CAMBIO: Usar el total con descuento
                 response = tx.create(
                     buy_order=buy_order,
                     session_id=request.session.session_key,
-                    amount=int(total),
+                    amount=int(total),  # ← AQUÍ: Usar total con descuento
                     return_url=request.build_absolute_uri(reverse('evaluate_payment'))
                 )
 
@@ -360,6 +439,9 @@ def billing_info(request):
                     "cart_products": cart_products,
                     "quantities": quantities,
                     "total": total,
+                    "total_original": cart_total,
+                    "coupon": coupon,
+                    "coupon_discount": coupon_discount,
                     "shipping_info": shipping_info,
                     "personal_info": personal_info,
                 })
@@ -378,6 +460,9 @@ def billing_info(request):
             "cart_products": cart_products,
             "quantities": quantities,
             "total": total,
+            "total_original": cart_total,
+            "coupon": coupon,
+            "coupon_discount": coupon_discount,
             "shipping_info": shipping_info,
             "personal_info": personal_info,
         })
@@ -579,7 +664,15 @@ def create_order_from_session(request, transaction_response=None):
     cart_products = cart.get_products()
     quantities = cart.get_quants()
     international_status = cart.get_international_status()
-    total = cart.cart_total()
+    cart_total = cart.cart_total()
+
+    # ===== OBTENER CUPÓN DE LA SESIÓN =====
+    coupon_code = request.session.get('coupon_code')
+    coupon_discount = request.session.get('coupon_discount', 0)
+    coupon = None
+    
+    # Calcular el total final con descuento
+    amount_pay = float(cart_total) - coupon_discount
 
     # Obtener información de envío
     shipping = request.session.get('shipping_info')
@@ -601,7 +694,6 @@ def create_order_from_session(request, transaction_response=None):
         shipping.get('shipping_country', '')
     ]))
     
-    amount_pay = total
     user = request.user if request.user.is_authenticated else None
     
     # Obtener workshop si existe
@@ -616,6 +708,22 @@ def create_order_from_session(request, transaction_response=None):
     # Verificar si hay productos internacionales
     has_international = any(international_status.values())
 
+    # ===== VALIDAR Y OBTENER CUPÓN =====
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(code=coupon_code)
+            # Verificar que el cupón sigue siendo válido
+            can_use, message = coupon.can_use(user=user, amount=cart_total)
+            if not can_use:
+                # Si el cupón ya no es válido, no aplicar descuento
+                coupon = None
+                coupon_discount = 0
+                amount_pay = cart_total
+        except Coupon.DoesNotExist:
+            coupon = None
+            coupon_discount = 0
+            amount_pay = cart_total
+
     # Crear la orden (buy_order se genera automáticamente)
     order = Order(
         user=user,
@@ -624,13 +732,40 @@ def create_order_from_session(request, transaction_response=None):
         phone=phone,
         id_number=id_number,
         shipping_address=shipping_address,
-        amount_pay=amount_pay,
+        amount_before_discount=cart_total,  # NUEVO: Total antes de descuento
+        coupon=coupon,  # NUEVO: Cupón aplicado
+        coupon_discount=coupon_discount,  # NUEVO: Monto del descuento
+        amount_pay=amount_pay,  # Total final con descuento
         workshop=workshop,
         has_international_items=has_international
     )
     
     # Guardar - esto generará automáticamente el buy_order
     order.save()
+
+    # ===== REGISTRAR USO DEL CUPÓN =====
+    if coupon:
+        try:
+            # Crear registro de uso
+            CouponUsage.objects.create(
+                coupon=coupon,
+                user=user,
+                order=order
+            )
+            
+            # Incrementar contador de usos
+            coupon.times_used += 1
+            coupon.save()
+            
+            # Limpiar cupón de la sesión
+            if 'coupon_code' in request.session:
+                del request.session['coupon_code']
+            if 'coupon_discount' in request.session:
+                del request.session['coupon_discount']
+                
+        except Exception as e:
+            # Log del error pero no fallar la orden
+            print(f"Error al registrar uso del cupón: {e}")
 
     # Crear los ítems de la orden
     for product in cart_products:
@@ -717,5 +852,60 @@ def orders(request, pk):
 def payment_success(request):
     return render(request, "payment/payment_success.html", {})
 
+
 def payment_failed(request):
     return render(request, "payment/payment_failed.html", {})
+
+
+def validate_coupon(request):
+    """Vista AJAX para validar cupones"""
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip().upper()
+        
+        if not code:
+            return JsonResponse({'valid': False, 'message': 'Ingresa un código de cupón'})
+        
+        try:
+            coupon = Coupon.objects.get(code=code)
+        except Coupon.DoesNotExist:
+            return JsonResponse({'valid': False, 'message': 'Cupón inválido'})
+        
+        # Obtener monto del carrito
+        from cart.cart import Cart
+        cart = Cart(request)
+        cart_total = float(cart.cart_total())
+        
+        # Verificar si puede usar el cupón
+        user = request.user if request.user.is_authenticated else None
+        can_use, message = coupon.can_use(user=user, amount=cart_total)
+        
+        if not can_use:
+            return JsonResponse({'valid': False, 'message': message})
+        
+        # Calcular descuento
+        discount_amount = float(coupon.calculate_discount(cart_total))
+        new_total = cart_total - discount_amount
+        
+        # Guardar en sesión
+        request.session['coupon_code'] = code
+        request.session['coupon_discount'] = float(discount_amount)
+        
+        return JsonResponse({
+            'valid': True,
+            'message': f'¡Cupón aplicado! Descuento: ${discount_amount:,.0f}',
+            'discount_amount': float(discount_amount),
+            'new_total': float(new_total),
+            'original_total': cart_total
+        })
+    
+    return JsonResponse({'valid': False, 'message': 'Método no permitido'})
+
+
+def remove_coupon(request):
+    """Remover cupón de la sesión"""
+    if 'coupon_code' in request.session:
+        del request.session['coupon_code']
+    if 'coupon_discount' in request.session:
+        del request.session['coupon_discount']
+    
+    return JsonResponse({'success': True, 'message': 'Cupón removido'})

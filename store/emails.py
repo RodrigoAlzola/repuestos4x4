@@ -82,6 +82,7 @@ def send_registration_email_async(user_email, full_name):
     email_thread.start()
     logger.info("[EMAIL] Thread iniciado para envío asíncrono")
 
+
 def send_order_confirmation_email(order):
     """Envía email de confirmación de compra"""
     logger.info(f"[ORDER EMAIL] Iniciando envío para orden #{order.id}")
@@ -106,6 +107,16 @@ def send_order_confirmation_email(order):
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${item.price:,.0f}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${item.get_total():,.0f}</td>
         </tr>
+        """
+    
+    # ===== NUEVO: Sección de cupón =====
+    coupon_section = ""
+    if order.coupon:
+        coupon_section = f"""
+        <div style="background-color: #d4edda; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0; border-radius: 5px;">
+            <strong>🎟️ Cupón Aplicado: {order.coupon.code}</strong><br>
+            <strong style="color: #28a745;">¡Ahorraste ${order.coupon_discount:,.0f}!</strong>
+        </div>
         """
     
     # Mensaje específico según tipo de orden
@@ -151,6 +162,35 @@ def send_order_confirmation_email(order):
     next_steps_workshop = '<li>Contacta al taller para agendar tu instalación</li>' if order.workshop else ''
     next_steps_mixed = '<li>Los productos locales e internacionales pueden llegar en fechas diferentes</li>' if order.has_international_items and local_items else ''
     
+    # ===== NUEVO: Footer de la tabla con cupón =====
+    table_footer = ""
+    if order.coupon:
+        table_footer = f"""
+            <tr>
+                <td colspan="3" style="padding: 10px; text-align: right;">Subtotal:</td>
+                <td style="padding: 10px; text-align: right;">${order.amount_before_discount:,.0f}</td>
+            </tr>
+            <tr style="background-color: #d4edda;">
+                <td colspan="3" style="padding: 10px; text-align: right; color: #28a745;">
+                    <strong>Descuento ({order.coupon.code}):</strong>
+                </td>
+                <td style="padding: 10px; text-align: right; color: #28a745;">
+                    <strong>-${order.coupon_discount:,.0f}</strong>
+                </td>
+            </tr>
+            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                <td colspan="3" style="padding: 15px; text-align: right;">TOTAL PAGADO:</td>
+                <td style="padding: 15px; text-align: right; color: #28a745; font-size: 1.2em;">${order.amount_pay:,.0f}</td>
+            </tr>
+        """
+    else:
+        table_footer = f"""
+            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                <td colspan="3" style="padding: 15px; text-align: right;">TOTAL:</td>
+                <td style="padding: 15px; text-align: right; color: #28a745; font-size: 1.2em;">${order.amount_pay:,.0f}</td>
+            </tr>
+        """
+    
     html_message = f"""
     <html>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -163,6 +203,8 @@ def send_order_confirmation_email(order):
                 <p><strong>Fecha:</strong> {order.date_order.strftime('%d/%m/%Y %H:%M')}</p>
                 
                 {delivery_message}
+
+                {coupon_section}
                 
                 <h3>Información del Cliente</h3>
                 <p>
@@ -191,10 +233,7 @@ def send_order_confirmation_email(order):
                         {products_html}
                     </tbody>
                     <tfoot>
-                        <tr style="background-color: #f8f9fa; font-weight: bold;">
-                            <td colspan="3" style="padding: 15px; text-align: right;">TOTAL:</td>
-                            <td style="padding: 15px; text-align: right; color: #28a745; font-size: 1.2em;">${order.amount_pay:,.0f}</td>
-                        </tr>
+                        {table_footer}
                     </tfoot>
                 </table>
                 
@@ -229,11 +268,7 @@ def send_order_confirmation_email(order):
             html_message=html_message,
             fail_silently=False,
         )
-        # logger.info(f"[ORDER EMAIL] ✅ Email enviado exitosamente a {order.email}")
-        # print(f"✅ Email de confirmación enviado a {order.email} para orden #{order.id}")
     except Exception as e:
-        # logger.error(f"[ORDER EMAIL] ❌ Error enviando email: {e}")
-        # print(f"❌ Error enviando email de orden #{order.id}: {e}")
         raise
 
 
@@ -270,8 +305,18 @@ def send_provider_order_notification(order):
             logger.warning(f"[PROVIDER EMAIL] Proveedor {provider.name} no tiene email configurado")
             continue
         
-        # Calcular subtotal del proveedor
-        provider_total = sum(item.get_total() for item in items)
+        # Calcular subtotal del proveedor (ANTES de descuento)
+        provider_subtotal = sum(item.get_total() for item in items)
+        
+        # Calcular proporción del descuento que corresponde a este proveedor
+        provider_discount = 0
+        provider_total = provider_subtotal
+        
+        if order.coupon and order.amount_before_discount > 0:
+            # Proporción de productos de este proveedor vs total
+            proportion = provider_subtotal / order.amount_before_discount
+            provider_discount = order.coupon_discount * float(proportion)
+            provider_total = float(provider_subtotal) - provider_discount
         
         # Construir lista de productos del proveedor
         products_html = ""
@@ -286,6 +331,59 @@ def send_provider_order_notification(order):
                 <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${item.get_total():,.0f}</td>
             </tr>
             """
+        
+        # Footer de la tabla con cupón
+        table_footer = ""
+        if order.coupon and provider_discount > 0:
+            table_footer = f"""
+            <tr>
+                <td colspan="4" style="padding: 10px; text-align: right;">Subtotal de tus productos:</td>
+                <td style="padding: 10px; text-align: right;">${provider_subtotal:,.0f}</td>
+            </tr>
+            <tr style="background-color: #d4edda;">
+                <td colspan="4" style="padding: 10px; text-align: right; color: #28a745;">
+                    Descuento proporcional ({order.coupon.code}):
+                </td>
+                <td style="padding: 10px; text-align: right; color: #28a745;">
+                    -${provider_discount:,.0f}
+                </td>
+            </tr>
+            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                <td colspan="4" style="padding: 15px; text-align: right;">TOTAL DE TUS PRODUCTOS:</td>
+                <td style="padding: 15px; text-align: right; color: #007bff; font-size: 1.2em;">${provider_total:,.0f}</td>
+            </tr>
+            """
+        else:
+            table_footer = f"""
+            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                <td colspan="4" style="padding: 15px; text-align: right;">TOTAL DE TUS PRODUCTOS:</td>
+                <td style="padding: 15px; text-align: right; color: #007bff; font-size: 1.2em;">${provider_total:,.0f}</td>
+            </tr>
+            """
+        
+        # Información del cupón
+        coupon_info = ""
+        if order.coupon:
+            coupon_info = f"""
+            <div style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 5px;">
+                <strong>🎟️ Información de Descuento:</strong><br>
+                El cliente usó el cupón <strong>{order.coupon.code}</strong><br>
+                • Descuento total de la orden: <strong>${order.coupon_discount:,.0f}</strong><br>
+                • Descuento aplicado a tus productos: <strong>${provider_discount:,.0f}</strong><br>
+                <small style="color: #856404;">El descuento se distribuyó proporcionalmente entre todos los proveedores según el valor de sus productos.</small>
+            </div>
+            """
+        
+        # Resumen de la orden
+        order_summary = f"""
+        <div style="background-color: #e7f3ff; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0; border-radius: 5px;">
+            <strong>📊 Resumen de la Orden Completa:</strong><br>
+            • Subtotal antes de descuento: <strong>${order.amount_before_discount:,.0f}</strong><br>
+            {f'• Descuento total aplicado: <strong>${order.coupon_discount:,.0f}</strong><br>' if order.coupon else ''}
+            • <strong>Total pagado por el cliente: ${order.amount_pay:,.0f}</strong><br>
+            <small style="color: #004085;">Tu parte corresponde a ${provider_total:,.0f} del total de la orden.</small>
+        </div>
+        """
         
         subject = f'Nueva Orden #{order.buy_order} - 4x4MAX'
         
@@ -305,6 +403,10 @@ def send_provider_order_notification(order):
                         <p style="margin: 5px 0;"><strong>Fecha:</strong> {order.date_order.strftime('%d/%m/%Y %H:%M')}</p>
                         <p style="margin: 5px 0;"><strong>Estado de Pago:</strong> <span style="color: #28a745;">✓ PAGADO</span></p>
                     </div>
+                    
+                    {coupon_info}
+                    
+                    {order_summary}
                     
                     <h3>Información del Cliente</h3>
                     <p>
@@ -332,10 +434,7 @@ def send_provider_order_notification(order):
                             {products_html}
                         </tbody>
                         <tfoot>
-                            <tr style="background-color: #f8f9fa; font-weight: bold;">
-                                <td colspan="4" style="padding: 15px; text-align: right;">TOTAL DE TUS PRODUCTOS:</td>
-                                <td style="padding: 15px; text-align: right; color: #007bff; font-size: 1.2em;">${provider_total:,.0f}</td>
-                            </tr>
+                            {table_footer}
                         </tfoot>
                     </table>
                     
@@ -375,7 +474,6 @@ def send_provider_order_notification(order):
             logger.info(f"[PROVIDER EMAIL] ✅ Email enviado a {provider.name} ({provider.email})")
         except Exception as e:
             logger.error(f"[PROVIDER EMAIL] ❌ Error enviando a {provider.name}: {e}")
-            # No lanzar excepción para que continúe con otros proveedores
 
 
 def send_provider_order_notification_async(order):

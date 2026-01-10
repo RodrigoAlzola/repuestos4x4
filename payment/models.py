@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from store.models import Product
@@ -5,6 +6,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from payment.validators import validar_rut
 import datetime
+from django.utils import timezone
 
 class ShippingAddress(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shipping_addresses')
@@ -91,6 +93,11 @@ class Order(models.Model):
     accounting_date = models.CharField(max_length=10, null=True, blank=True)
     transaction_status = models.CharField(max_length=50, null=True, blank=True)
 
+    # Cupones
+    coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True)
+    coupon_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount_before_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
     class Meta:
         ordering = ['-date_order']
     
@@ -150,3 +157,89 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f'Order Item - {str(self.id)}'
+
+
+class Coupon(models.Model):
+    DISCOUNT_TYPES = [
+        ('percentage', 'Porcentaje'),
+        ('fixed', 'Monto Fijo'),
+    ]
+    
+    code = models.CharField(max_length=50, unique=True, verbose_name="Código del cupón")
+    description = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPES, default='percentage')
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor del descuento")
+    
+    # Límites de uso
+    max_uses = models.IntegerField(default=0, help_text="0 = ilimitado")
+    times_used = models.IntegerField(default=0)
+    max_uses_per_user = models.IntegerField(default=1, help_text="Máximo de usos por usuario")
+    
+    # Fechas de validez
+    valid_from = models.DateTimeField(verbose_name="Válido desde")
+    valid_until = models.DateTimeField(verbose_name="Válido hasta")
+    
+    # Requisitos
+    min_purchase_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Monto mínimo de compra")
+    
+    # Estado
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Cupón"
+        verbose_name_plural = "Cupones"
+    
+    def __str__(self):
+        return f"{self.code} - {self.discount_value}{'%' if self.discount_type == 'percentage' else ' CLP'}"
+    
+    def is_valid(self):
+        """Verifica si el cupón está activo y dentro del período de validez"""
+        now = timezone.now()
+        return (
+            self.is_active and
+            self.valid_from <= now <= self.valid_until and
+            (self.max_uses == 0 or self.times_used < self.max_uses)
+        )
+    
+    def calculate_discount(self, amount):
+        """Calcula el descuento a aplicar"""
+        amount = Decimal(str(amount))  # Convertir a Decimal
+        
+        if self.discount_type == 'percentage':
+            return amount * (self.discount_value / Decimal('100'))
+        else:  # fixed
+            return min(self.discount_value, amount)
+    
+    def can_use(self, user=None, amount=0):
+        """Verifica si el cupón puede ser usado"""
+        if not self.is_valid():
+            return False, "Cupón inválido o expirado"
+        
+        if amount < self.min_purchase_amount:
+            return False, f"Compra mínima de ${self.min_purchase_amount:,.0f} requerida"
+        
+        if user and self.max_uses_per_user > 0:
+            user_usage = CouponUsage.objects.filter(coupon=self, user=user).count()
+            if user_usage >= self.max_uses_per_user:
+                return False, "Ya has usado este cupón el máximo de veces permitidas"
+        
+        return True, "Cupón válido"
+
+
+class CouponUsage(models.Model):
+    """Registro de uso de cupones"""
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    order = models.ForeignKey('Order', on_delete=models.CASCADE, null=True)
+    used_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Uso de Cupón"
+        verbose_name_plural = "Usos de Cupones"
+    
+    def __str__(self):
+        return f"{self.coupon.code} - {self.user.username if self.user else 'Invitado'} - {self.used_at}"

@@ -10,4 +10,6 @@ urlpatterns = [
     path('shipped_dash', views.shipped_dash, name='shipped_dash'),
     path('not_shipped_dash', views.not_shipped_dash, name='not_shipped_dash'),
     path('order/<int:pk>', views.orders, name='orders'),
+    path('validate-coupon/', views.validate_coupon, name='validate_coupon'),
+    path('remove-coupon/', views.remove_coupon, name='remove_coupon'),
 ]
