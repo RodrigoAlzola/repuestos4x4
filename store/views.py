@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
 from payment.forms import ShippingForm
 from payment.models import ShippingAddress
+from django.contrib.auth import get_user_model
 from django import forms 
 from django.db.models import Q, Count
 import json
@@ -46,9 +47,22 @@ def about(request):
 
 def login_user(request):
     if request.method == 'POST':
-        username = request.POST['username']
+        username_or_email = request.POST['username']
         password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
+        
+        # Intentar autenticar con username primero
+        user = authenticate(request, username=username_or_email, password=password)
+        
+        # Si falla, intentar con email
+        if user is None:
+            User = get_user_model()
+            try:
+                # Buscar usuario por email
+                user_obj = User.objects.get(email=username_or_email)
+                # Autenticar con el username encontrado
+                user = authenticate(request, username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                user = None
         
         if user is not None:
             login(request, user)
