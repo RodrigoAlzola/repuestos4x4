@@ -87,9 +87,6 @@ class Command(BaseCommand):
         # Filtrar: mantener solo productos con stock local O internacional > 0
         df = df[(df['BR SOH'] > 0) | (df['MELSOH'] > 0)]
         
-        # ============ NUEVO: FILTRAR PRODUCTOS EXISTENTES ============
-        self.stdout.write(self.style.WARNING(f'🔍 Verificando productos existentes en la base de datos...'))
-        
         # Obtener todos los part_numbers existentes en la BD
         productos = Product.objects.filter(provider=provider)
         print('Todos los productos', len(productos))
@@ -99,17 +96,8 @@ class Command(BaseCommand):
             .values_list('part_number', flat=True)
         )
         
-        self.stdout.write(self.style.SUCCESS(
-            f'📊 Productos existentes en BD: {len(existing_part_numbers)}'
-        ))
-        
         # Filtrar productos que ya existen (solo crear nuevos)
         df = df[~df['Numero de parte'].astype(str).isin(existing_part_numbers)]
-        productos_a_procesar = len(df)
-        
-        self.stdout.write(self.style.SUCCESS(
-            f'✨ Filas nuevas a procesar: {productos_a_procesar}'
-        ))
 
         creados = 0
         compatibles = 0
@@ -120,14 +108,15 @@ class Command(BaseCommand):
         verified_images = {}
         
         total_rows = len(df)
-
         new_products_preview = "0000"
+        n = 0
         for index, row in df.iterrows():
+            n = n + 1
             try:
                 # Progress indicator cada 50 filas
                 if index % 50 == 0:
                     elapsed = time.time() - start_time
-                    self.stdout.write(f"⏱️  Procesando fila {index + 1}/{total_rows} - Tiempo transcurrido: {timedelta(seconds=int(elapsed))}")
+                    self.stdout.write(f"⏱️  Procesando fila {n}/{total_rows} - Tiempo transcurrido: {timedelta(seconds=int(elapsed))}")
 
                 # Limpieza de columnas
                 sku = str(row["Numero de parte"])
@@ -135,6 +124,7 @@ class Command(BaseCommand):
                 model = str(row["Modelo"])
                 serie = str(row["Serie"])
 
+                # Primera ves que ve el producto
                 if sku != new_products_preview:
                     new_products_preview = sku
 

@@ -31,7 +31,23 @@ class CompatibilityInline(admin.TabularInline):
     extra = 0
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'part_number', 'price', 'stock')
-    inlines = [CompatibilityInline]
+    from django.contrib import admin
+from .models import Product
 
-admin.site.register(Product, ProductAdmin)
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    # Búsqueda por SKU, nombre, part_number, etc.
+    search_fields = ['sku', 'name', 'part_number', 'description']
+    
+    # Filtros en el panel lateral
+    list_filter = ['category', 'provider', 'is_sale']
+    
+    # Campos a mostrar en la lista
+    list_display = ['sku', 'name', 'category', 'price', 'stock', 'stock_international', 'provider']
+    
+    # Ordenamiento por defecto
+    ordering = ['sku']
+    
+    # Paginación
+    list_per_page = 50
+
