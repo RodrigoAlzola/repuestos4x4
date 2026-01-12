@@ -788,3 +788,99 @@ def test_smtp_debug(request):
     lines.append("=" * 60)
     
     return HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
+
+
+# store/views.py
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+import os
+
+@csrf_exempt
+def check_env_vars(request):
+    """Ver variables de entorno en Railway"""
+    if request.GET.get('key') != 'debug2025':
+        return HttpResponse('Forbidden', status=403)
+    
+    lines = []
+    lines.append("=" * 70)
+    lines.append("VARIABLES DE ENTORNO - RAILWAY")
+    lines.append("=" * 70)
+    
+    # Variables de email que buscamos
+    email_vars = [
+        'EMAIL_BACKEND',
+        'EMAIL_HOST',
+        'EMAIL_PORT',
+        'EMAIL_USE_TLS',
+        'EMAIL_USE_SSL',
+        'EMAIL_HOST_USER',
+        'EMAIL_HOST_PASSWORD',
+        'DEFAULT_FROM_EMAIL',
+        'RAILWAY_ENVIRONMENT',
+        'DJANGO_SETTINGS_MODULE',
+    ]
+    
+    lines.append("\n📧 VARIABLES DE EMAIL EN OS.ENVIRON:")
+    for var in email_vars:
+        value = os.environ.get(var)
+        if value is None:
+            lines.append(f"  {var}: ❌ NO EXISTE")
+        elif var == 'EMAIL_HOST_PASSWORD':
+            lines.append(f"  {var}: ***{value[-4:] if len(value) > 4 else '***'} (len={len(value)})")
+        else:
+            # Mostrar el valor con comillas para ver espacios
+            lines.append(f"  {var}: '{value}' (len={len(value)})")
+    
+    lines.append("\n⚙️  CONFIGURACIÓN DE DJANGO SETTINGS:")
+    lines.append(f"  EMAIL_BACKEND: {settings.EMAIL_BACKEND}")
+    lines.append(f"  EMAIL_HOST: '{settings.EMAIL_HOST}'")
+    lines.append(f"  EMAIL_PORT: {settings.EMAIL_PORT} (type: {type(settings.EMAIL_PORT).__name__})")
+    lines.append(f"  EMAIL_USE_TLS: {getattr(settings, 'EMAIL_USE_TLS', 'NOT SET')}")
+    lines.append(f"  EMAIL_USE_SSL: {getattr(settings, 'EMAIL_USE_SSL', 'NOT SET')}")
+    lines.append(f"  EMAIL_HOST_USER: '{settings.EMAIL_HOST_USER}'")
+    
+    password = settings.EMAIL_HOST_PASSWORD
+    if password:
+        lines.append(f"  EMAIL_HOST_PASSWORD: ***{password[-4:]} (len={len(password)})")
+    else:
+        lines.append(f"  EMAIL_HOST_PASSWORD: ❌ VACÍO")
+    
+    lines.append(f"  DEFAULT_FROM_EMAIL: '{settings.DEFAULT_FROM_EMAIL}'")
+    lines.append(f"  EMAIL_TIMEOUT: {getattr(settings, 'EMAIL_TIMEOUT', 'NOT SET')}")
+    
+    lines.append("\n🔍 ANÁLISIS:")
+    
+    # Detectar problemas comunes
+    issues = []
+    
+    port_env = os.environ.get('EMAIL_PORT', '')
+    if port_env and not port_env.strip().isdigit():
+        issues.append(f"⚠️  EMAIL_PORT tiene caracteres inválidos: '{port_env}'")
+    
+    if os.environ.get('EMAIL_HOST', '').startswith(' ') or os.environ.get('EMAIL_HOST', '').endswith(' '):
+        issues.append("⚠️  EMAIL_HOST tiene espacios al inicio o final")
+    
+    if os.environ.get('EMAIL_HOST_USER', '').startswith(' ') or os.environ.get('EMAIL_HOST_USER', '').endswith(' '):
+        issues.append("⚠️  EMAIL_HOST_USER tiene espacios al inicio o final")
+    
+    if not os.environ.get('EMAIL_HOST'):
+        issues.append("❌ EMAIL_HOST no está configurado")
+    
+    if not os.environ.get('EMAIL_HOST_USER'):
+        issues.append("❌ EMAIL_HOST_USER no está configurado")
+    
+    if not os.environ.get('EMAIL_HOST_PASSWORD'):
+        issues.append("❌ EMAIL_HOST_PASSWORD no está configurado")
+    
+    if issues:
+        for issue in issues:
+            lines.append(f"  {issue}")
+    else:
+        lines.append("  ✅ No se detectaron problemas obvios en las variables")
+    
+    lines.append("\n" + "=" * 70)
+    lines.append("Copia toda esta salida y compártela")
+    lines.append("=" * 70)
+    
+    return HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
