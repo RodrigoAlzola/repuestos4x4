@@ -46,10 +46,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--new-csv',
-            type=str, 
-            default=r'C:\Users\rodri\NewProject\custcat.csv',
-            help='Ruta del archivo CSV nuevo (default: custcad.csv)'
+        'csv_path',
+        nargs='?',  # Opcional
+        type=str,
+        default=r'C:\Users\rodri\NewProject\custcat.csv',
+        help='Ruta del archivo CSV (default: custcat.csv)'
         )
 
         parser.add_argument(
