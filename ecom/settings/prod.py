@@ -38,6 +38,8 @@ TRANSBANK_API_KEY = os.environ.get('PROD_TRANSBANK_API_KEY')
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 DEFAULT_FROM_EMAIL = 'no-reply@4x4max.cl'
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+SENDGRID_SANDBOX_MODE = False  # Por si acaso
 
 # Seguridad para producción
 SECURE_SSL_REDIRECT = True
