@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from payment.views import test_smtp_debug
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -19,4 +20,5 @@ urlpatterns = [
     path('get-dynamic-filters/', views.get_dynamic_filters, name='get_dynamic_filters'),
     path('category_summary/', views.category_summary, name='category_summary'),
     path('search/', views.search, name='search'),
+    path('debug-smtp/', test_smtp_debug),
 ]
