@@ -19,6 +19,4 @@ urlpatterns = [
     path('get-dynamic-filters/', views.get_dynamic_filters, name='get_dynamic_filters'),
     path('category_summary/', views.category_summary, name='category_summary'),
     path('search/', views.search, name='search'),
-    path('debug-smtp/', views.test_smtp_debug),
-    path('check-env/', views.check_env_vars),
 ]
