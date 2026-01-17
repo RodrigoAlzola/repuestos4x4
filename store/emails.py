@@ -687,10 +687,10 @@ def send_pending_order_email(order):
     
     # Datos bancarios (puedes moverlos a settings.py)
     bank_info = {
-        'bank_name': 'Banco Estado',
+        'bank_name': 'Banco Crédito e Inversiones (Bci)',
         'account_type': 'Cuenta Corriente',
-        'account_number': '12345678-9',
-        'rut': '76.XXX.XXX-X',
+        'account_number': '95077251',
+        'rut': '77.001.797-1',
         'account_holder': '4X4MAX REPUESTOS LTDA',
         'email': 'contacto@4x4max.cl'
     }
