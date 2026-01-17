@@ -242,11 +242,32 @@ def update_info(request):
                 print(shipping_form.errors)
                 print("DATOS POST:")
                 print(request.POST)
+                
+                # IMPORTANTE: Renderizar el template con los errores
+                return render(request, 'update_info.html', {
+                    'profile': current_user,
+                    'shipping_form_new': shipping_form,  # Formulario con errores
+                    'shipping_addresses': shipping_addresses,
+                    'has_addresses': has_addresses,
+                    'can_add_more': can_add_more,
+                    'max_addresses': MAX_ADDRESSES,
+                    'addresses_count': shipping_addresses.count(),
+                })
         
         elif form_type == 'shipping_edit':
             # Editar dirección existente
             address_id = request.POST.get('address_id')
-            shipping_address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+            
+            # Validar que address_id existe
+            if not address_id:
+                messages.error(request, "❌ No se especificó la dirección a editar.")
+                return redirect('update_info')
+            
+            try:
+                shipping_address = ShippingAddress.objects.get(id=address_id, user=request.user)
+            except ShippingAddress.DoesNotExist:
+                messages.error(request, "❌ La dirección no existe o no tienes permisos para editarla.")
+                return redirect('update_info')
             
             shipping_form = ShippingForm(request.POST, instance=shipping_address)
             if shipping_form.is_valid():
@@ -254,7 +275,88 @@ def update_info(request):
                 messages.success(request, "✅ Dirección actualizada correctamente.")
                 return redirect('update_info')
             else:
-                messages.error(request, "❌ Error al actualizar la dirección.")
+                # Mostrar errores específicos
+                error_messages = []
+                for field, errors in shipping_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"{field}: {error}")
+                
+                error_text = " | ".join(error_messages)
+                messages.error(request, f"❌ Error al actualizar: {error_text}")
+                
+                # DEBUG en consola
+                print("ERRORES AL EDITAR:")
+                print(shipping_form.errors)
+                print("DATOS POST:")
+                print(request.POST)
+                
+                # IMPORTANTE: Renderizar el template con los errores
+                # Re-obtener las direcciones actualizadas
+                shipping_addresses = ShippingAddress.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+                
+                return render(request, 'update_info.html', {
+                    'profile': current_user,
+                    'shipping_form_new': ShippingForm(),  # Formulario nuevo vacío
+                    'shipping_addresses': shipping_addresses,
+                    'has_addresses': has_addresses,
+                    'can_add_more': can_add_more,
+                    'max_addresses': MAX_ADDRESSES,
+                    'addresses_count': shipping_addresses.count(),
+                    'edit_error_address_id': address_id,  # Para saber qué dirección tuvo error
+                })
+        
+        elif form_type == 'shipping_delete':
+            # Eliminar dirección
+            address_id = request.POST.get('address_id')
+            
+            if not address_id:
+                messages.error(request, "❌ No se especificó la dirección a eliminar.")
+                return redirect('update_info')
+            
+            try:
+                shipping_address = ShippingAddress.objects.get(id=address_id, user=request.user)
+                was_default = shipping_address.is_default
+                shipping_address.delete()
+                
+                # Si era la default, hacer default otra dirección
+                if was_default:
+                    remaining_addresses = ShippingAddress.objects.filter(user=request.user).first()
+                    if remaining_addresses:
+                        remaining_addresses.is_default = True
+                        remaining_addresses.save()
+                
+                messages.success(request, "✅ Dirección eliminada correctamente.")
+            except ShippingAddress.DoesNotExist:
+                messages.error(request, "❌ La dirección no existe o no tienes permisos para eliminarla.")
+            
+            return redirect('update_info')
+        
+        elif form_type == 'set_default':
+            # Establecer dirección como default
+            address_id = request.POST.get('address_id')
+            
+            if not address_id:
+                messages.error(request, "❌ No se especificó la dirección.")
+                return redirect('update_info')
+            
+            try:
+                # Remover default de todas
+                ShippingAddress.objects.filter(user=request.user).update(is_default=False)
+                
+                # Establecer la nueva como default
+                shipping_address = ShippingAddress.objects.get(id=address_id, user=request.user)
+                shipping_address.is_default = True
+                shipping_address.save()
+                
+                messages.success(request, "✅ Dirección establecida como predeterminada.")
+            except ShippingAddress.DoesNotExist:
+                messages.error(request, "❌ La dirección no existe.")
+            
+            return redirect('update_info')
+        
+        else:
+            messages.error(request, "❌ Acción no válida.")
+            return redirect('update_info')
     
     # GET request
     # Formulario para nueva dirección
@@ -271,13 +373,13 @@ def update_info(request):
         shipping_form_new = ShippingForm()
     
     return render(request, 'update_info.html', {
-        'profile': current_user,  # Para mostrar info estática
-        'shipping_form_new': shipping_form_new,
+        'profile': current_user,
         'shipping_addresses': shipping_addresses,
         'has_addresses': has_addresses,
         'can_add_more': can_add_more,
         'max_addresses': MAX_ADDRESSES,
         'addresses_count': shipping_addresses.count(),
+        'shipping_form_new': shipping_form_new,
     })
 
 

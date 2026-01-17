@@ -7,9 +7,11 @@ urlpatterns = [
     path('payment_failed', views.payment_failed, name='payment_failed'),
     path('checkout', views.checkout, name='checkout'),
     path('billing_info', views.billing_info, name='billing_info'),
-    path('shipped_dash', views.shipped_dash, name='shipped_dash'),
-    path('not_shipped_dash', views.not_shipped_dash, name='not_shipped_dash'),
+    path('shipped_orders_dash', views.shipped_orders_dash, name='shipped_orders_dash'),
+    path('confirmed_orders_dash', views.confirmed_orders_dash, name='confirmed_orders_dash'),
+    path('pending_orders_dash', views.pending_orders_dash, name='pending_orders_dash'),
     path('order/<int:pk>', views.orders, name='orders'),
     path('validate-coupon/', views.validate_coupon, name='validate_coupon'),
     path('remove-coupon/', views.remove_coupon, name='remove_coupon'),
+    path('order-pending/<int:order_id>/', views.order_pending, name='order_pending'),
 ]

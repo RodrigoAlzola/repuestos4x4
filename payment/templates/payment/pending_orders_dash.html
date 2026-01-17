@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-clock-history text-warning me-2"></i>
+                Órdenes Pendientes de Pago
+            </h1>
+            <p class="text-muted mb-0">Órdenes pagadas por transferencia bancaria pendientes de confirmación</p>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark fs-5">
+                {{ orders.count }} orden{{ orders.count|pluralize:"es" }} pendiente{{ orders.count|pluralize:"s" }}
+            </span>
+        </div>
+    </div>
+
+    {% if orders %}
+        <div class="row">
+            {% for order in orders %}
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm border-warning">
+                    <!-- Header de la orden -->
+                    <div class="card-header bg-warning bg-gradient text-dark d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="bi bi-receipt me-2"></i>
+                                Orden #{{ order.buy_order }}
+                            </h5>
+                            <small>
+                                <i class="bi bi-calendar3 me-1"></i>
+                                {{ order.date_order|date:"d/m/Y H:i" }}
+                                ({{ order.date_order|timesince }} atrás)
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <div class="badge bg-light text-dark border mb-1" style="font-size: 0.9em;">
+                                <i class="bi bi-credit-card me-1"></i>
+                                Transferencia Bancaria
+                            </div>
+                            <div>
+                                <span class="badge bg-warning text-dark fs-6">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    PENDIENTE
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row">
+                            
+                            <!-- Columna 1: Cliente -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person-circle me-2"></i>Cliente
+                                </h6>
+                                <p class="mb-1"><strong>{{ order.full_name }}</strong></p>
+                                <p class="mb-1">
+                                    <i class="bi bi-envelope me-1"></i>
+                                    <a href="mailto:{{ order.email }}">{{ order.email }}</a>
+                                </p>
+                                <p class="mb-1">
+                                    <i class="bi bi-telephone me-1"></i>
+                                    <a href="tel:{{ order.phone }}">{{ order.phone }}</a>
+                                </p>
+                                <p class="mb-0">
+                                    <i class="bi bi-card-text me-1"></i>
+                                    {{ order.id_number }}
+                                </p>
+                            </div>
+
+                            <!-- Columna 2: Dirección -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-geo-alt me-2"></i>Dirección de Envío
+                                </h6>
+                                {% if order.workshop %}
+                                    <div class="alert alert-info py-2 mb-2">
+                                        <small>
+                                            <i class="bi bi-tools me-1"></i>
+                                            <strong>Taller:</strong> {{ order.workshop.name }}
+                                        </small>
+                                    </div>
+                                    <p class="mb-0" style="font-size: 0.9em; white-space: pre-line;">{{ order.workshop.address1 }}
+{{ order.workshop.commune }}, {{ order.workshop.city }}
+Tel: {{ order.workshop.phone }}</p>
+                                {% else %}
+                                    <p class="mb-0" style="font-size: 0.9em; white-space: pre-line;">{{ order.shipping_address }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Columna 3: Monto y Productos -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-cash-stack me-2"></i>Resumen
+                                </h6>
+                                
+                                {% if order.coupon %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">Subtotal:</small>
+                                        <div class="fw-bold">${{ order.amount_before_discount|currency_format }}</div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-success">
+                                            <i class="bi bi-ticket-perforated me-1"></i>
+                                            Descuento ({{ order.coupon.code }}):
+                                        </small>
+                                        <div class="fw-bold text-success">-${{ order.coupon_discount|currency_format }}</div>
+                                    </div>
+                                    <hr class="my-2">
+                                {% endif %}
+                                
+                                <div class="mb-3">
+                                    <small class="text-muted">Total:</small>
+                                    <h4 class="mb-0 text-warning">
+                                        ${{ order.amount_pay|currency_format }}
+                                    </h4>
+                                </div>
+
+                                <div>
+                                    <small class="text-muted d-block mb-1">Productos:</small>
+                                    <span class="badge bg-secondary">
+                                        {{ order.orderitem_set.count }} item{{ order.orderitem_set.count|pluralize:"s" }}
+                                    </span>
+                                    {% if order.has_international_items %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-globe"></i> Internacional
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Lista de productos (colapsable) -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#products{{ order.id }}">
+                                <i class="bi bi-box-seam me-1"></i>
+                                Ver Productos ({{ order.orderitem_set.count }})
+                            </button>
+                            
+                            <div class="collapse mt-3" id="products{{ order.id }}">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th class="text-center">Cantidad</th>
+                                                <th class="text-end">Precio</th>
+                                                <th class="text-end">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in order.orderitem_set.all %}
+                                            <tr>
+                                                <td>
+                                                    {{ item.product.name }}
+                                                    {% if item.is_international %}
+                                                        <span class="badge bg-info text-white ms-1">
+                                                            <i class="bi bi-globe"></i> Internacional
+                                                        </span>
+                                                    {% endif %}
+                                                    <br>
+                                                    <small class="text-muted">PN: {{ item.product.part_number }}</small>
+                                                </td>
+                                                <td class="text-center">{{ item.quantity }}</td>
+                                                <td class="text-end">${{ item.price|currency_format }}</td>
+                                                <td class="text-end">${{ item.get_total|currency_format }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Acciones -->
+                        <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Esperando confirmación de transferencia bancaria
+                                </small>
+                            </div>
+                            <div>
+                                <!-- Botón Confirmar Pago -->
+                                <button type="button" 
+                                        class="btn btn-success me-2" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#confirmModal{{ order.id }}">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Confirmar Pago
+                                </button>
+                                
+                                <!-- Botón Cancelar -->
+                                <button type="button" 
+                                        class="btn btn-outline-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#cancelModal{{ order.id }}">
+                                    <i class="bi bi-x-circle me-1"></i>
+                                    Cancelar Orden
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Confirmar Pago -->
+            <div class="modal fade" id="confirmModal{{ order.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Confirmar Pago Recibido
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="confirm_payment">
+                            <input type="hidden" name="order_id" value="{{ order.id }}">
+                            
+                            <div class="modal-body">
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        ¿Confirmar que se recibió el pago?
+                                    </h6>
+                                    <hr>
+                                    <p class="mb-2">
+                                        <strong>Orden:</strong> #{{ order.buy_order }}<br>
+                                        <strong>Cliente:</strong> {{ order.full_name }}<br>
+                                        <strong>Monto:</strong> ${{ order.amount_pay|currency_format }}
+                                    </p>
+                                </div>
+                                
+                                <h6 class="mb-3">Al confirmar se realizarán las siguientes acciones:</h6>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle text-success me-2"></i>
+                                        La orden cambiará a estado <strong>"PAGADO"</strong>
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-envelope text-primary me-2"></i>
+                                        Se enviará email de confirmación al cliente
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-send text-info me-2"></i>
+                                        Se notificará a los proveedores sobre la orden
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    Sí, Confirmar Pago
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Cancelar Orden -->
+            <div class="modal fade" id="cancelModal{{ order.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancelar Orden
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="cancel_order">
+                            <input type="hidden" name="order_id" value="{{ order.id }}">
+                            
+                            <div class="modal-body">
+                                <div class="alert alert-danger">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        ¿Estás seguro de cancelar esta orden?
+                                    </h6>
+                                    <hr>
+                                    <p class="mb-0">
+                                        <strong>Orden:</strong> #{{ order.buy_order }}<br>
+                                        <strong>Cliente:</strong> {{ order.full_name }}<br>
+                                        <strong>Monto:</strong> ${{ order.amount_pay|currency_format }}
+                                    </p>
+                                </div>
+                                
+                                <p class="mb-0">
+                                    Esta acción cambiará el estado de la orden a <strong>"CANCELADO"</strong>.
+                                    Considera contactar al cliente antes de cancelar.
+                                </p>
+                            </div>
+                            
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    No, Volver
+                                </button>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Sí, Cancelar Orden
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    {% else %}
+        <!-- Sin órdenes pendientes -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+            </div>
+            <h4 class="text-muted">No hay órdenes pendientes</h4>
+            <p class="text-muted">Todas las órdenes por transferencia bancaria han sido procesadas.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

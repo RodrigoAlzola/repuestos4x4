@@ -71,24 +71,24 @@
           </div>
           <div class="card-body">
             <div class="row">
-              <!-- WebPay -->
+              <!-- Transbank/WebPay -->
               <div class="col-md-6 mb-3">
-                <input type="radio" class="btn-check" name="payment_method" id="webpay" value="webpay" checked required>
+                <input type="radio" class="btn-check" name="payment_method" id="webpay" value="transbank" checked required>
                 <label class="btn btn-outline-payment w-100 d-flex flex-column align-items-center py-3" for="webpay">
                   {% load static %}
                   <img src="{% static 'images/webpay-logo.png' %}" alt="WebPay" style="height: 50px; margin-bottom: 10px;">
-                  <span>WebPay Plus</span> 
-                  <small class="text-muted">Tarjetas de crédito y débito</small>
+                  <span>Transbank</span> 
+                  <small class="text-muted">Pago inmediato con tarjeta</small>
                 </label>
               </div>
 
-              <!-- Placeholder para futuros métodos de pago -->
+              <!-- Transferencia Bancaria -->
               <div class="col-md-6 mb-3">
-                <input type="radio" class="btn-check" name="payment_method" id="transferencia" value="transferencia" disabled>
-                <label class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3" for="transferencia" style="opacity: 0.5;">
-                  <i class="bi bi-bank" style="font-size: 50px; margin-bottom: 10px;"></i>
+                <input type="radio" class="btn-check" name="payment_method" id="transferencia" value="bank_transfer">
+                <label class="btn btn-outline-payment w-100 d-flex flex-column align-items-center py-3" for="transferencia">
+                  <i class="bi bi-bank2" style="font-size: 50px; margin-bottom: 10px;"></i>
                   <span>Transferencia Bancaria</span>
-                  <small class="text-muted">Próximamente</small>
+                  <small class="text-muted">Confirmaremos tu pedido</small>
                 </label>
               </div>
             </div>
@@ -96,7 +96,7 @@
             <!-- Información del método seleccionado -->
             <div id="payment-info" class="alert alert-info mt-3">
               <i class="bi bi-shield-check me-2"></i>
-              <strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.
+              <strong>Transbank:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.
             </div>
           </div>
         </div>
@@ -121,8 +121,8 @@
             <i class="bi bi-arrow-left me-2"></i>Volver
           </a>
           <button type="submit" id="payButton" class="btn btn-danger" disabled>
-  Pagar Ahora
-</button>
+            <span id="buttonText">Pagar Ahora</span>
+          </button>
         </div>
       </form>
     </div>
@@ -255,13 +255,15 @@
   </div>
 </div>
 
-<!-- JavaScript -->
 <script>
   const termsCheckbox = document.getElementById('termsCheckbox');
   const payButton = document.getElementById('payButton');
+  const buttonText = document.getElementById('buttonText');
   const termsAcceptedInput = document.getElementById('termsAcceptedInput');
   const acceptTermsBtn = document.getElementById('acceptTermsBtn');
   const paymentForm = document.getElementById('paymentForm');
+  const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+  const paymentInfo = document.getElementById('payment-info');
 
   // Habilitar/deshabilitar botón según checkbox
   termsCheckbox.addEventListener('change', function() {
@@ -276,6 +278,21 @@
     termsAcceptedInput.value = 'true';
   });
 
+  // Cambiar texto del botón según método de pago
+  paymentMethods.forEach(method => {
+    method.addEventListener('change', function() {
+      if (this.value === 'transbank') {
+        buttonText.textContent = 'Pagar Ahora';
+        paymentInfo.innerHTML = '<i class="bi bi-shield-check me-2"></i><strong>Transbank:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.';
+        paymentInfo.className = 'alert alert-info mt-3';
+      } else if (this.value === 'bank_transfer') {
+        buttonText.textContent = 'Hacer un Pedido';
+        paymentInfo.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>Transferencia Bancaria:</strong> Tu pedido quedará pendiente hasta confirmar el pago. Recibirás un email con los datos bancarios.';
+        paymentInfo.className = 'alert alert-warning mt-3';
+      }
+    });
+  });
+
   // Validar antes de enviar el formulario
   paymentForm.addEventListener('submit', function(e) {
     if (!termsCheckbox.checked) {
@@ -285,24 +302,14 @@
     }
     
     // Mostrar loading en el botón
+    const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
     payButton.disabled = true;
-    payButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
-  });
-
-  // Mostrar información según el método de pago seleccionado
-  const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
-  const paymentInfo = document.getElementById('payment-info');
-
-  paymentMethods.forEach(method => {
-    method.addEventListener('change', function() {
-      if (this.value === 'webpay') {
-        paymentInfo.innerHTML = '<i class="bi bi-shield-check me-2"></i><strong>WebPay Plus:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.';
-        paymentInfo.className = 'alert alert-info mt-3';
-      } else if (this.value === 'transferencia') {
-        paymentInfo.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>Transferencia Bancaria:</strong> Recibirás un email con los datos bancarios para realizar la transferencia.';
-        paymentInfo.className = 'alert alert-warning mt-3';
-      }
-    });
+    
+    if (selectedMethod === 'transbank') {
+      payButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando pago...';
+    } else {
+      payButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creando pedido...';
+    }
   });
 </script>
 
@@ -346,6 +353,19 @@
       top: 20px;
       z-index: 100;
     }
+  }
+</style>
+
+<style>
+  /* Estilos existentes... */
+  
+  /* Altura fija para opciones de pago */
+  label.btn-outline-payment {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 </style>
 

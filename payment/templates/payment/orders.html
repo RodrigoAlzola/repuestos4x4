@@ -201,11 +201,11 @@
       <!-- Botones de acción -->
       <div class="text-center mb-5">
         {% if order.shipped %}
-          <a href="{% url 'shipped_dash' %}" class="btn btn-secondary btn-lg me-2">
+          <a href="{% url 'shipped_order_dash' %}" class="btn btn-secondary btn-lg me-2">
             <i class="bi bi-arrow-left me-2"></i>Volver a Órdenes Enviadas
           </a>
         {% else %}
-          <a href="{% url 'not_shipped_dash' %}" class="btn btn-secondary btn-lg me-2">
+          <a href="{% url 'confirmed_order_dash' %}" class="btn btn-secondary btn-lg me-2">
             <i class="bi bi-arrow-left me-2"></i>Volver a Órdenes Pendientes
           </a>
         {% endif %}

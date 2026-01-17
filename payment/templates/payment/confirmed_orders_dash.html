@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                Órdenes Confirmadas
+            </h1>
+            <p class="text-muted mb-0">Órdenes pagadas pendientes de envío</p>
+        </div>
+        <div>
+            <span class="badge bg-success fs-5">
+                {{ orders.count }} orden{{ orders.count|pluralize:"es" }} confirmada{{ orders.count|pluralize:"s" }}
+            </span>
+        </div>
+    </div>
+
+    {% if orders %}
+        <div class="row">
+            {% for order in orders %}
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm border-success">
+                    <!-- Header de la orden -->
+                    <div class="card-header bg-success bg-gradient text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="bi bi-receipt me-2"></i>
+                                Orden #{{ order.buy_order }}
+                            </h5>
+                            <small>
+                                <i class="bi bi-calendar3 me-1"></i>
+                                {{ order.date_order|date:"d/m/Y H:i" }}
+                                ({{ order.date_order|timesince }} atrás)
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <div class="badge bg-light text-dark border mb-1" style="font-size: 0.9em;">
+                                <i class="bi bi-credit-card me-1"></i>
+                                {% if order.payment_method == 'transbank' %}
+                                    Transbank
+                                {% elif order.payment_method == 'bank_transfer' %}
+                                    Transferencia
+                                {% else %}
+                                    Pagado
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    CONFIRMADO
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row">
+                            
+                            <!-- Columna 1: Cliente -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person-circle me-2"></i>Cliente
+                                </h6>
+                                <p class="mb-1"><strong>{{ order.full_name }}</strong></p>
+                                <p class="mb-1">
+                                    <i class="bi bi-envelope me-1"></i>
+                                    <a href="mailto:{{ order.email }}">{{ order.email }}</a>
+                                </p>
+                                <p class="mb-1">
+                                    <i class="bi bi-telephone me-1"></i>
+                                    <a href="tel:{{ order.phone }}">{{ order.phone }}</a>
+                                </p>
+                                <p class="mb-0">
+                                    <i class="bi bi-card-text me-1"></i>
+                                    {{ order.id_number }}
+                                </p>
+                            </div>
+
+                            <!-- Columna 2: Dirección -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-geo-alt me-2"></i>Dirección de Envío
+                                </h6>
+                                {% if order.workshop %}
+                                    <div class="alert alert-info py-2 mb-2">
+                                        <small>
+                                            <i class="bi bi-tools me-1"></i>
+                                            <strong>Taller:</strong> {{ order.workshop.name }}
+                                        </small>
+                                    </div>
+                                    <p class="mb-0" style="font-size: 0.9em; white-space: pre-line;">{{ order.workshop.address1 }}
+{{ order.workshop.commune }}, {{ order.workshop.city }}
+Tel: {{ order.workshop.phone }}</p>
+                                {% else %}
+                                    <p class="mb-0" style="font-size: 0.9em; white-space: pre-line;">{{ order.shipping_address }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Columna 3: Monto y Productos -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-cash-stack me-2"></i>Resumen
+                                </h6>
+                                
+                                {% if order.coupon %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">Subtotal:</small>
+                                        <div class="fw-bold">${{ order.amount_before_discount|currency_format }}</div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-success">
+                                            <i class="bi bi-ticket-perforated me-1"></i>
+                                            Descuento ({{ order.coupon.code }}):
+                                        </small>
+                                        <div class="fw-bold text-success">-${{ order.coupon_discount|currency_format }}</div>
+                                    </div>
+                                    <hr class="my-2">
+                                {% endif %}
+                                
+                                <div class="mb-3">
+                                    <small class="text-muted">Total Pagado:</small>
+                                    <h4 class="mb-0 text-success">
+                                        ${{ order.amount_pay|currency_format }}
+                                    </h4>
+                                </div>
+
+                                <div>
+                                    <small class="text-muted d-block mb-1">Productos:</small>
+                                    <span class="badge bg-secondary">
+                                        {{ order.orderitem_set.count }} item{{ order.orderitem_set.count|pluralize:"s" }}
+                                    </span>
+                                    {% if order.has_international_items %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-globe"></i> Internacional
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Lista de productos (colapsable) -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#products{{ order.id }}">
+                                <i class="bi bi-box-seam me-1"></i>
+                                Ver Productos ({{ order.orderitem_set.count }})
+                            </button>
+                            
+                            <div class="collapse mt-3" id="products{{ order.id }}">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th class="text-center">Cantidad</th>
+                                                <th class="text-end">Precio</th>
+                                                <th class="text-end">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in order.orderitem_set.all %}
+                                            <tr>
+                                                <td>
+                                                    {{ item.product.name }}
+                                                    {% if item.is_international %}
+                                                        <span class="badge bg-info text-white ms-1">
+                                                            <i class="bi bi-globe"></i> Internacional
+                                                        </span>
+                                                    {% endif %}
+                                                    <br>
+                                                    <small class="text-muted">PN: {{ item.product.part_number }}</small>
+                                                </td>
+                                                <td class="text-center">{{ item.quantity }}</td>
+                                                <td class="text-end">${{ item.price|currency_format }}</td>
+                                                <td class="text-end">${{ item.get_total|currency_format }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información de pago (si es Transbank) -->
+                        {% if order.payment_method == 'transbank' and order.authorization_code %}
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#payment{{ order.id }}">
+                                <i class="bi bi-credit-card me-1"></i>
+                                Ver Detalles de Pago
+                            </button>
+                            
+                            <div class="collapse mt-3" id="payment{{ order.id }}">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Código de Autorización:</small>
+                                                <div class="fw-bold">{{ order.authorization_code }}</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Tarjeta:</small>
+                                                <div class="fw-bold">**** {{ order.card_number }}</div>
+                                            </div>
+                                            {% if order.payment_type_code %}
+                                            <div class="col-md-6 mt-2">
+                                                <small class="text-muted">Tipo de Pago:</small>
+                                                <div class="fw-bold">{{ order.get_payment_type_display }}</div>
+                                            </div>
+                                            {% endif %}
+                                            {% if order.installments_number %}
+                                            <div class="col-md-6 mt-2">
+                                                <small class="text-muted">Cuotas:</small>
+                                                <div class="fw-bold">{{ order.installments_number }}</div>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Acciones -->
+                        <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Orden confirmada, lista para preparar envío
+                                </small>
+                            </div>
+                            <div>
+                                <!-- Botón Marcar como Enviada -->
+                                <button type="button" 
+                                        class="btn btn-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#shippedModal{{ order.id }}">
+                                    <i class="bi bi-truck me-1"></i>
+                                    Marcar como Enviada
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Marcar como Enviada -->
+            <div class="modal fade" id="shippedModal{{ order.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-truck me-2"></i>
+                                Marcar como Enviada
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="mark_shipped">
+                            <input type="hidden" name="order_id" value="{{ order.id }}">
+                            
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        ¿Marcar esta orden como enviada?
+                                    </h6>
+                                    <hr>
+                                    <p class="mb-2">
+                                        <strong>Orden:</strong> #{{ order.buy_order }}<br>
+                                        <strong>Cliente:</strong> {{ order.full_name }}<br>
+                                        <strong>Dirección:</strong> 
+                                        {% if order.workshop %}
+                                            {{ order.workshop.name }}
+                                        {% else %}
+                                            {{ order.shipping_address|truncatewords:10 }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                
+                                <p class="mb-0">
+                                    Al confirmar, esta orden se moverá a la sección de 
+                                    <strong>"Órdenes Enviadas"</strong> y se registrará la fecha de envío.
+                                </p>
+                            </div>
+                            
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-truck me-2"></i>
+                                    Sí, Marcar como Enviada
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    {% else %}
+        <!-- Sin órdenes confirmadas -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h4 class="text-muted">No hay órdenes confirmadas pendientes de envío</h4>
+            <p class="text-muted">Todas las órdenes confirmadas han sido enviadas.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

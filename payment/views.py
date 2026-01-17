@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+import logging
+from django.shortcuts import render, redirect, get_object_or_404
 from cart.cart import Cart
 from payment.forms import ShippingForm, PaymentForm
 from payment.models import ShippingAddress
@@ -11,7 +12,7 @@ from store.forms import GuestUserForm, UserInfoForm
 from workshop.models import Workshop
 import datetime
 import uuid
-from store.emails import send_order_confirmation_email_async, send_provider_order_notification_async
+from store.emails import send_order_confirmation_email_async, send_pending_order_email_async, send_provider_order_notification_async
 from django.http import JsonResponse
 
 from transbank.webpay.webpay_plus.transaction import Transaction
@@ -20,6 +21,8 @@ import os
 
 from django.urls import reverse
 
+# Crear el logger
+logger = logging.getLogger(__name__)
 
 env = os.getenv('DJANGO_SETTINGS_MODULE', '')
 
@@ -382,19 +385,18 @@ def billing_info(request):
                 "personal_info": personal_info,
             })
 
-        # ===== NO CREAR LA ORDEN AÚN - Solo generar buy_order =====
-        from datetime import datetime
-        import uuid
-        
-        # Generar un buy_order único
-        timestamp = datetime.now().strftime('%Y%m%d')
-        unique_id = str(uuid.uuid4())[:8].upper()
-        buy_order = f"{timestamp}-{unique_id}"
 
-        # ===== PROCESAR PAGO CON TRANSBANK =====
-        payment_method = request.POST.get('payment_method', 'webpay')
+        # ===== OBTENER MÉTODO DE PAGO =====
+        payment_method = request.POST.get('payment_method', 'transbank')
         
-        if payment_method == 'webpay':
+        # ===== FLUJO: TRANSBANK =====
+        if payment_method == 'transbank':
+        
+            # Generar un buy_order único
+            timestamp = datetime.datetime.now().strftime('%Y%m%d')
+            unique_id = str(uuid.uuid4())[:8].upper()
+            buy_order = f"{timestamp}-{unique_id}"
+        
             try:
                 env = os.getenv('DJANGO_SETTINGS_MODULE', '')
                 
@@ -446,9 +448,110 @@ def billing_info(request):
                     "personal_info": personal_info,
                 })
         
-        elif payment_method == 'transferencia':
-            messages.info(request, "Transferencia bancaria próximamente disponible.")
-            return redirect('billing_info')
+        # ===== FLUJO: TRANSFERENCIA BANCARIA =====
+        elif payment_method == 'bank_transfer':
+            # Crear la orden directamente con estado pending
+            try:
+                # Preparar dirección de envío
+                if shipping_info.get('shipping_to_workshop') == 'True':
+                    workshop_id = shipping_info.get('shipping_workshop')
+                    workshop = Workshop.objects.get(id=workshop_id) if workshop_id else None
+                    shipping_address = f"Taller: {workshop.name if workshop else 'No especificado'}"
+                else:
+                    workshop = None
+                    shipping_address = f"{shipping_info['shipping_address1']}\n"
+                    if shipping_info.get('shipping_address2'):
+                        shipping_address += f"{shipping_info['shipping_address2']}\n"
+                    shipping_address += f"{shipping_info['shipping_commune']}, {shipping_info['shipping_city']}\n"
+                    if shipping_info.get('shipping_state'):
+                        shipping_address += f"{shipping_info['shipping_state']}\n"
+                    if shipping_info.get('shipping_zipcode'):
+                        shipping_address += f"CP: {shipping_info['shipping_zipcode']}\n"
+                    shipping_address += f"{shipping_info['shipping_country']}"
+
+                # Crear la orden
+                order = Order.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    full_name=personal_info['full_name'],
+                    email=personal_info['email'],
+                    phone=personal_info['phone'],
+                    id_number=shipping_info['shipping_id_number'],
+                    shipping_address=shipping_address,
+                    workshop=workshop,
+                    amount_pay=total,
+                    payment_method='bank_transfer',
+                    order_status='pending',  # Estado pendiente
+                    # Cupón
+                    coupon=coupon,
+                    coupon_discount=coupon_discount,
+                    amount_before_discount=cart_total if coupon else total,
+                )
+
+                # Crear los items de la orden
+                has_international = False
+                for product in cart_products:
+                    quantity = quantities.get(str(product.id), 0)
+                    
+                    # Determinar precio
+                    if product.is_sale:
+                        price = product.sale_price
+                    else:
+                        price = product.price
+                    
+                    # Verificar si es internacional
+                    is_international = getattr(product, 'is_international', False)
+                    if is_international:
+                        has_international = True
+                    
+                    # Crear OrderItem
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        user=request.user if request.user.is_authenticated else None,
+                        quantity=quantity,
+                        price=price,
+                        is_international=is_international,
+                    )
+
+                # Actualizar flag de items internacionales
+                if has_international:
+                    order.has_international_items = True
+                    order.save()
+
+                # Marcar cupón como usado
+                if coupon:
+                    coupon.use_coupon(user=request.user if request.user.is_authenticated else None)
+
+                # Limpiar carrito y sesión
+                clear_cart_and_session(request)
+
+                # Limpiar también información de cupón
+                for key in ['coupon_code', 'coupon_discount']:
+                    if key in request.session:
+                        del request.session[key]
+
+                # Después de crear la orden y antes del redirect
+                send_pending_order_email_async(order)
+
+                # Redirigir a página de confirmación
+                return redirect('order_pending', order_id=order.id)
+
+            except Exception as e:
+                print(f"Error creando orden con transferencia bancaria: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                messages.error(request, "Error al crear el pedido. Por favor intenta nuevamente.")
+                return render(request, "payment/billing_info.html", {
+                    "cart_products": cart_products,
+                    "quantities": quantities,
+                    "total": total,
+                    "total_original": cart_total,
+                    "coupon": coupon,
+                    "coupon_discount": coupon_discount,
+                    "shipping_info": shipping_info,
+                    "personal_info": personal_info,
+                })
         
         else:
             messages.error(request, "Método de pago no válido.")
@@ -525,6 +628,8 @@ def evaluate_payment(request):
                 order = create_order_from_session(request)
                 order.buy_order = pending_buy_order
                 order.session_id = request.session.session_key
+                order.payment_method='transbank',
+                order.order_status='paid',
                 order.paid = True
                 order.payment_status = 'APPROVED'
                 order.save()
@@ -607,14 +712,12 @@ def evaluate_payment(request):
 
 def update_order_with_transaction(order, transaction_response):
     """Actualiza la orden con los datos de la transacción de Transbank"""
-    from django.utils import timezone
-    from datetime import datetime
     
     # Procesar fecha de transacción
     transaction_date_str = transaction_response.get('transaction_date')
     if transaction_date_str:
         try:
-            transaction_date = datetime.strptime(transaction_date_str[:19], '%Y-%m-%dT%H:%M:%S')
+            transaction_date = datetime.datetime.strptime(transaction_date_str[:19], '%Y-%m-%dT%H:%M:%S')
             order.transaction_date = timezone.make_aware(transaction_date)
         except:
             order.transaction_date = timezone.now()
@@ -786,38 +889,139 @@ def create_order_from_session(request, transaction_response=None):
     return order
 
 
-def not_shipped_dash(request):
+def confirmed_orders_dash(request):
+    """Dashboard para órdenes confirmadas (pagadas) pero no enviadas"""
     if request.user.is_authenticated and request.user.is_superuser:
-        orders = Order.objects.filter(shipped=False)
+        # Filtrar órdenes pagadas pero no enviadas
+        orders = Order.objects.filter(
+            order_status='paid',
+            shipped=False
+        ).order_by('-date_order')
+        
         if request.POST:
-            status = request.POST['shipping_status']
-            num = request.POST['num']
-            order = Order.objects.filter(id=num)
-            now = datetime.datetime.now()
-            order.update(shipped=True, date_shipped=now)
-            messages.success(request, "Shipping Status Updated.")
-            return redirect('home')
+            action = request.POST.get('action')
+            order_id = request.POST.get('order_id')
+            
+            try:
+                order = Order.objects.get(id=order_id)
+                
+                if action == 'mark_shipped':
+                    # Marcar como enviada
+                    now = datetime.datetime.now()
+                    order.shipped = True
+                    order.date_shipped = now
+                    order.save()
+                    
+                    messages.success(request, f"✅ Orden #{order.buy_order} marcada como enviada.")
+                    return redirect('confirmed_orders_dash')
+                    
+            except Order.DoesNotExist:
+                messages.error(request, "❌ La orden no existe.")
+                return redirect('confirmed_orders_dash')
+            except Exception as e:
+                logger.error(f"[CONFIRMED DASH] Error procesando orden: {e}")
+                messages.error(request, f"❌ Error procesando la orden: {str(e)}")
+                return redirect('confirmed_orders_dash')
 
-        return render(request, "payment/not_shipped_dash.html", {'orders': orders})
+        return render(request, "payment/confirmed_orders_dash.html", {'orders': orders})
     else:
-        messages.success(request, "Access Denied.")
+        messages.error(request, "⛔ Acceso Denegado.")
         return redirect('home')
 
 
-def shipped_dash(request):
+def shipped_orders_dash(request):
+    """Dashboard para órdenes que ya fueron enviadas"""
     if request.user.is_authenticated and request.user.is_superuser:
-        orders = Order.objects.filter(shipped=True)
+        # Filtrar órdenes enviadas
+        orders = Order.objects.filter(shipped=True).order_by('-date_shipped')
+        
         if request.POST:
-            status = request.POST['shipping_status']
-            num = request.POST['num']
-            order = Order.objects.filter(id=num)
-            order.update(shipped=False)
-            messages.success(request, "Shipping Status Updated.")
+            action = request.POST.get('action')
+            order_id = request.POST.get('order_id')
+            
+            try:
+                order = Order.objects.get(id=order_id)
+                
+                if action == 'mark_unshipped':
+                    # Marcar como no enviada
+                    order.shipped = False
+                    order.date_shipped = None
+                    order.save()
+                    
+                    messages.success(request, f"✅ Orden #{order.buy_order} marcada como no enviada.")
+                    return redirect('shipped_orders_dash')
+                    
+            except Order.DoesNotExist:
+                messages.error(request, "❌ La orden no existe.")
+                return redirect('shipped_orders_dash')
+            except Exception as e:
+                logger.error(f"[SHIPPED DASH] Error procesando orden: {e}")
+                messages.error(request, f"❌ Error procesando la orden: {str(e)}")
+                return redirect('shipped_orders_dash')
 
-
-        return render(request, "payment/shipped_dash.html", {'orders': orders})
+        return render(request, "payment/shipped_orders_dash.html", {'orders': orders})
     else:
-        messages.success(request, "Access Denied.")
+        messages.error(request, "⛔ Acceso Denegado.")
+        return redirect('home')
+    
+    
+def pending_orders_dash(request):
+    """Dashboard para órdenes pendientes de pago (transferencia bancaria)"""
+    if request.user.is_authenticated and request.user.is_superuser:
+        # Filtrar órdenes con pago pendiente
+        orders = Order.objects.filter(
+            payment_method='bank_transfer',
+            order_status='pending'
+        ).order_by('-date_order')
+        
+        if request.POST:
+            action = request.POST.get('action')
+            order_id = request.POST.get('order_id')
+            
+            try:
+                order = Order.objects.get(id=order_id)
+                
+                if action == 'confirm_payment':
+                    # Cambiar estado a pagado
+                    order.order_status = 'paid'
+                    order.save()
+                    
+                    # Enviar email de confirmación al cliente
+                    try:
+                        send_order_confirmation_email_async(order)
+                        logger.info(f"[PENDING DASH] Email de confirmación enviado al cliente para orden #{order.id}")
+                    except Exception as e:
+                        logger.error(f"[PENDING DASH] Error enviando email al cliente: {e}")
+                    
+                    # Enviar emails a proveedores
+                    try:
+                        send_provider_order_notification_async(order)
+                        logger.info(f"[PENDING DASH] Emails a proveedores iniciados para orden #{order.id}")
+                    except Exception as e:
+                        logger.error(f"[PENDING DASH] Error enviando emails a proveedores: {e}")
+                    
+                    messages.success(request, f"✅ Orden #{order.buy_order} confirmada. Emails enviados al cliente y proveedores.")
+                    return redirect('pending_orders_dash')
+                
+                elif action == 'cancel_order':
+                    # Cancelar orden
+                    order.order_status = 'cancelled'
+                    order.save()
+                    
+                    messages.warning(request, f"❌ Orden #{order.buy_order} cancelada.")
+                    return redirect('pending_orders_dash')
+                
+            except Order.DoesNotExist:
+                messages.error(request, "❌ La orden no existe.")
+                return redirect('pending_orders_dash')
+            except Exception as e:
+                logger.error(f"[PENDING DASH] Error procesando orden: {e}")
+                messages.error(request, f"❌ Error procesando la orden: {str(e)}")
+                return redirect('pending_orders_dash')
+
+        return render(request, "payment/pending_orders_dash.html", {'orders': orders})
+    else:
+        messages.error(request, "⛔ Acceso Denegado.")
         return redirect('home')
 
 
@@ -835,12 +1039,12 @@ def orders(request, pk):
                 now = datetime.datetime.now()
                 order_obj.update(shipped=True, date_shipped=now)
                 messages.success(request, "Orden marcada como enviada.")
-                return redirect('shipped_dash')  # ✅ Redirige a enviadas
+                return redirect('shipped_orders_dash')  # ✅ Redirige a enviadas
             else:
                 order_obj = Order.objects.filter(id=pk)
                 order_obj.update(shipped=False)
                 messages.success(request, "Orden marcada como no enviada.")
-                return redirect('not_shipped_dash')  # ✅ Redirige a pendientes
+                return redirect('confirmed_orders_dash')  # ✅ Redirige a pendientes
 
         return render(request, "payment/orders.html", {"order": order, "items": items})
 
@@ -909,3 +1113,18 @@ def remove_coupon(request):
         del request.session['coupon_discount']
     
     return JsonResponse({'success': True, 'message': 'Cupón removido'})
+
+
+def order_pending(request, order_id):
+    """
+    Vista para mostrar un pedido pendiente (transferencia bancaria)
+    """
+    order = get_object_or_404(Order, id=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    
+    context = {
+        'order': order,
+        'order_items': order_items,
+    }
+    
+    return render(request, 'payment/order_pending.html', context)

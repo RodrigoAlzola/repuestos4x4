@@ -62,6 +62,21 @@ class ShippingAddress(models.Model):
 
 
 class Order(models.Model):
+     # Choices para método de pago
+    PAYMENT_METHOD_CHOICES = [
+        ('transbank', 'Transbank'),
+        ('bank_transfer', 'Transferencia Bancaria'),
+    ]
+    
+    # Choices para estatus de la orden
+    ORDER_STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
+        ('paid', 'Pagado'),
+        ('shipped', 'Enviado'),
+        ('completed', 'Completado'),
+        ('cancelled', 'Cancelado'),
+    ]
+
     # Información del comprador (SIEMPRE del usuario)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     full_name = models.CharField(max_length=250)
@@ -82,6 +97,10 @@ class Order(models.Model):
 
     # Buy order - generado automáticamente
     buy_order = models.CharField(max_length=50, unique=True, null=True, blank=True, db_index=True)
+
+    # NUEVOS CAMPOS
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='transbank')
+    order_status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='pending')
 
     # Informacion de pago
     transaction_date = models.DateTimeField(null=True, blank=True)

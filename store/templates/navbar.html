@@ -55,9 +55,11 @@
                 Orders
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="{% url 'shipped_dash' %}">Shipped Orders</a></li>
+                <li><a class="dropdown-item" href="{% url 'pending_orders_dash' %}">Pending Orders</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{% url 'not_shipped_dash' %}">Not Shipped Orders</a></li>
+                <li><a class="dropdown-item" href="{% url 'confirmed_orders_dash' %}">Confirmed Orders</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'shipped_orders_dash' %}">Shipped Orders</a></li>
             </ul>
         </div>
         {% endif %}

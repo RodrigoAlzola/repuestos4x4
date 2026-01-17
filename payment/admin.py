@@ -16,8 +16,33 @@ class OrderItemInline(admin.StackedInline):
 # Extend Order model
 class OrderAdmin(admin.ModelAdmin):
     model = Order
-    readonly_fields = ["date_order"]
-    fields = ["user", "full_name", "email", "phone", "id_number", "shipping_address", "amount_pay", "date_order", "shipped", "date_shipped"]
+    readonly_fields = ["date_order", "buy_order"]
+    
+    list_display = ['buy_order', 'full_name', 'email', 'payment_method', 'order_status', 'amount_pay', 'date_order', 'shipped']
+    list_filter = ['payment_method', 'order_status', 'shipped', 'date_order']
+    search_fields = ['buy_order', 'full_name', 'email', 'phone']
+    
+    fieldsets = (
+        ('Estado de la Orden', {
+            'fields': ('buy_order', 'date_order', 'payment_method', 'order_status')
+        }),
+        ('Información del Cliente', {
+            'fields': ('user', 'full_name', 'email', 'phone', 'id_number')
+        }),
+        ('Información de Envío', {
+            'fields': ('shipping_address', 'workshop', 'shipped', 'date_shipped', 'has_international_items')
+        }),
+        ('Información de Pago', {
+            'fields': ('amount_pay', 'amount_before_discount', 'coupon', 'coupon_discount')
+        }),
+        ('Detalles de Transacción Transbank', {
+            'fields': ('transaction_date', 'authorization_code', 'payment_type_code', 
+                      'installments_number', 'card_number'),
+            'classes': ('collapse',),
+            'description': 'Estos campos solo se completan para pagos con Transbank'
+        }),
+    )
+    
     inlines = [OrderItemInline]
 
 # Unregister old
