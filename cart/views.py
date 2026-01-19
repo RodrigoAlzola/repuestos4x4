@@ -92,3 +92,19 @@ def cart_update(request):
         response = JsonResponse({'quiantity': product_quantity})
         messages.success(request, ("Your Cart has been Updated."))
         return response
+    
+def cart_clear(request):
+    """Vacía todo el carrito"""
+    if request.POST.get('action') == 'post':
+        # Obtener el carrito actual
+        cart = Cart(request)
+        
+        # Limpiar el carrito
+        cart.cart.clear()
+        
+        # Actualizar la sesión
+        request.session.modified = True
+        
+        # Respuesta JSON
+        response = JsonResponse({'message': 'Carrito vaciado exitosamente'})
+        return response

@@ -35,7 +35,7 @@
 
         <!-- Shipping Address -->
         <div class="card mb-4">
-          <div class="card-header bg-success text-white">
+          <div class="card-header bg-dark text-white">
             <i class="bi bi-geo-alt me-2"></i>Dirección de Envío 
           </div>
           <div class="card-body">
@@ -58,7 +58,7 @@
         </div>
 
         <!-- Mensaje de destino -->
-        <div class="alert {% if is_workshop_shipping %}alert-info{% else %}alert-success{% endif %} text-center">
+        <div class="alert {% if is_workshop_shipping %}alert-info{% else %}alert-dark{% endif %} text-center">
           {% if not is_workshop_shipping %}
             Todos nuestros envios son por pagar al currier nacional.
           {% endif %}
@@ -66,7 +66,7 @@
 
         <!-- Método de Pago -->
         <div class="card mb-4">
-          <div class="card-header bg-info text-white">
+          <div class="card-header bg-danger text-white">
             <i class="bi bi-credit-card me-2"></i>Selecciona tu método de pago
           </div>
           <div class="card-body">
@@ -94,7 +94,7 @@
             </div>
 
             <!-- Información del método seleccionado -->
-            <div id="payment-info" class="alert alert-info mt-3">
+            <div id="payment-info" class="alert alert-dark mt-3">
               <i class="bi bi-shield-check me-2"></i>
               <strong>Transbank:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.
             </div>
@@ -155,7 +155,7 @@
       
       <!-- Cupón aplicado (solo mostrar si existe) -->
       {% if coupon %}
-        <div class="alert alert-success py-2 mb-3">
+        <div class="alert alert-danger py-2 mb-3">
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <i class="bi bi-ticket-perforated me-2"></i>
@@ -163,7 +163,7 @@
               <small>{{ coupon.description }}</small>
             </div>
             <div class="text-end">
-              <strong class="text-success">-$ {{ coupon_discount|currency_format }}</strong>
+              <strong class="text-danger">-$ {{ coupon_discount|currency_format }}</strong>
             </div>
           </div>
         </div>
@@ -175,18 +175,18 @@
           <span>Subtotal:</span>
           <span>$ {{ total_original|currency_format }}</span>
         </div>
-        <div class="d-flex justify-content-between mb-2 text-success">
+        <div class="d-flex justify-content-between mb-2 text-danger">
           <span><i class="bi bi-tag-fill me-1"></i>Descuento:</span>
           <span>-$ {{ coupon_discount|currency_format }}</span>
         </div>
         <hr>
-        <h5 class="d-flex justify-content-between">
-          <strong>Total:</strong>
-          <strong class="text-success">$ {{ total|currency_format }} CLP</strong>
-        </h5>
-      {% else %}
-        <h5><strong>Total: $ {{ total|currency_format }} CLP</strong></h5>
       {% endif %}
+
+      <!-- Total siempre en la misma posición -->
+      <h5 class="d-flex justify-content-between">
+        <strong>Total:</strong>
+        <strong class="text-danger">$ {{ total|currency_format }} CLP</strong>
+      </h5>
       
       <small class="text-muted">(con IVA incluido)</small>
       
@@ -206,7 +206,7 @@
 <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
+      <div class="modal-header bg-danger text-white">
         <h5 class="modal-title" id="termsModalLabel">
           <i class="bi bi-file-text me-2"></i>Términos y Condiciones
         </h5>
@@ -247,7 +247,7 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           <i class="bi bi-x-circle me-2"></i>Cerrar
         </button>
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="acceptTermsBtn">
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="acceptTermsBtn">
           <i class="bi bi-check-circle me-2"></i>Aceptar
         </button>
       </div>
@@ -284,7 +284,7 @@
       if (this.value === 'transbank') {
         buttonText.textContent = 'Pagar Ahora';
         paymentInfo.innerHTML = '<i class="bi bi-shield-check me-2"></i><strong>Transbank:</strong> Serás redirigido a la pasarela de pago segura de Transbank para completar tu compra.';
-        paymentInfo.className = 'alert alert-info mt-3';
+        paymentInfo.className = 'alert alert-dark mt-3';
       } else if (this.value === 'bank_transfer') {
         buttonText.textContent = 'Hacer un Pedido';
         paymentInfo.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>Transferencia Bancaria:</strong> Tu pedido quedará pendiente hasta confirmar el pago. Recibirás un email con los datos bancarios.';

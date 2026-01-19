@@ -38,7 +38,7 @@
     {% if user.is_authenticated %}
         <!-- Profile dropdown -->
         <div class="dropdown me-2">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn btn-outline-danger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Perfil
             </button>
             <ul class="dropdown-menu">
@@ -64,7 +64,7 @@
         </div>
         {% endif %}
 
-        <a href="{% url 'logout' %}" class="btn btn-outline-danger">Salir</a>
+        <a href="{% url 'logout' %}" class="btn btn-outline-secondary">Salir</a>
     {% else %}
         <a href="{% url 'login' %}" class="btn btn-outline-danger me-2">Ingresar</a>
         <a href="{% url 'register' %}" class="btn btn-outline-secondary">Registrate</a>

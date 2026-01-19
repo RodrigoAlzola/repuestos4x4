@@ -174,3 +174,8 @@ class Cart():
                     else:
                         total = total + (product.price * int(value))
         return total
+    
+    def clear(self):
+        """Vacía todo el carrito"""
+        self.cart.clear()
+        self.session.modified = True

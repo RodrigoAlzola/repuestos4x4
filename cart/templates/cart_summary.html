@@ -33,7 +33,9 @@
         <div class="card mb-3 {% if product.is_international_item %}border-info{% endif %}">
             <div class="row g-0">
                 <div class="col-md-4">
-                    <img src="{{ product.image }}" class="img-fluid rounded-start" alt="{{ product.name }}">
+                    <a href="{% url 'product' product.id %}" style="text-decoration: none;">
+                        <img src="{{ product.image }}" class="img-fluid rounded-start" alt="{{ product.name }}" style="cursor: pointer; transition: opacity 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    </a>
                 </div>
                 <div class="col-md-8">
                     <div class="card-body">
@@ -46,8 +48,9 @@
                         {% endif %}
                         
                         <br/>
-                        <h5 class="card-title">{{ product.name }}</h5>
-                        <p class="card-text">{{ product.description }}</p>
+                        <a href="{% url 'product' product.id %}" style="text-decoration: none; color: inherit;">
+                            <h5 class="card-title" style="cursor: pointer; transition: color 0.3s;" onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='inherit'">{{ product.name }}</h5>
+                        </a>
                         <br/>
                         
                         <!-- Precio -->
@@ -81,14 +84,14 @@
 
                         {% else %}
                             {% if product.stock > 10 %}
-                                <div class="alert alert-success py-2 mb-3 d-inline-block">
+                                <div class="alert alert-warning py-2 mb-3 d-inline-block">
                                     <small>
                                         <i class="bi bi-clock me-1"></i>
                                         <strong>Compra Nacional:</strong> Stock disponible: +10 
                                     </small>
                                 </div>
                             {% else %}
-                                <div class="alert alert-success py-2 mb-3 d-inline-block">
+                                <div class="alert alert-warning py-2 mb-3 d-inline-block">
                                     <small>
                                         <i class="bi bi-clock me-1"></i>
                                         <strong>Compra Nacional:</strong> Stock disponible: {{ product.stock }} 
@@ -120,7 +123,7 @@
                                 <button type="button" data-index="{{product.id}}" class="btn btn-sm btn-secondary update-cart">
                                     <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
                                 </button>
-                                <button type="button" data-index="{{product.id}}" class="btn btn-sm btn-danger delete-product">
+                                <button type="button" data-index="{{product.id}}" class="btn btn-sm btn-outline-secondary delete-product">
                                     <i class="bi bi-trash me-1"></i>Eliminar
                                 </button>
                             </div>
@@ -138,7 +141,7 @@
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <h3 class="mb-0">Total: <span class="text-success">${{ total|currency_format }} CLP</span></h3>(con IVA incluido)
+                        <h3 class="mb-0">Total: <span class="text-danger">${{ total|currency_format }} CLP</span></h3>(con IVA incluido)
                         {% if has_international %}
                         <small class="text-muted">
                             <i class="bi bi-info-circle me-1"></i>
@@ -147,13 +150,16 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6 text-end">
-                        <a href="{% url 'all_products' %}" class="btn btn-outline-secondary me-2">
-                            <i class="bi bi-arrow-left me-1"></i>Seguir Comprando
-                        </a>
-                        <a href="{% url 'checkout' %}" class="btn btn-success btn-lg">
-                            <i class="bi bi-arrow-right me-1"></i>Continuar
-                        </a>
-                    </div>
+                    <a href="{% url 'all_products' %}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>Seguir Comprando
+                    </a>
+                    <button type="button" class="btn btn-outline-dark me-2" id="clearCartBtn">
+                        <i class="bi bi-trash me-1"></i>Vaciar Carrito
+                    </button>
+                    <a href="{% url 'checkout' %}" class="btn btn-danger btn-lg">
+                        <i class="bi bi-arrow-right me-1"></i>Continuar
+                    </a>
+                </div>
                 </div>
             </div>
         </div>
@@ -164,7 +170,7 @@
             <i class="bi bi-cart-x" style="font-size: 4rem; color: #ccc;"></i>
             <h3 class="mt-3">Tu carrito está vacío</h3>
             <p class="text-muted">Agrega productos para comenzar tu compra</p>
-            <a href="{% url 'all_products' %}" class="btn btn-primary mt-3">
+            <a href="{% url 'all_products' %}" class="btn btn-danger mt-3">
                 <i class="bi bi-shop me-2"></i>Ir a la Tienda
             </a>
         </div>
@@ -215,6 +221,28 @@ $(document).on('click', '.delete-product', function(e){
             },
             error: function(xhr, errmsg, err){
                 alert('Error al eliminar el producto');
+            }
+        });
+    }
+});
+
+// Clear entire cart
+$(document).on('click', '#clearCartBtn', function(e){
+    e.preventDefault();
+    
+    if(confirm('¿Estás seguro de vaciar todo el carrito? Esta acción no se puede deshacer.')){
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'cart_clear' %}",
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                action: 'post'
+            },
+            success: function(json){
+                location.reload();
+            },
+            error: function(xhr, errmsg, err){
+                alert('Error al vaciar el carrito');
             }
         });
     }
