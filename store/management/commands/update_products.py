@@ -63,7 +63,7 @@ class Command(BaseCommand):
         # ============ INICIAR TIMER ============ #
         start_time = time.time()
 
-        new_csv_path = kwargs['new_csv']
+        new_csv_path = kwargs['csv_path']
         skip_image_check = kwargs.get('skip_image_check', False)
 
         # Obtener o crear el proveedor Terraintamer
