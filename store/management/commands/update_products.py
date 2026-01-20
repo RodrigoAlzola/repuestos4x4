@@ -42,7 +42,7 @@ def verify_image_url(url, default_url="https://parts.terraintamer.com/images/DEF
 
 
 class Command(BaseCommand):
-    help = 'Actualiza productos comparando archivo nuevo vs antiguo.'
+    help = 'Actualiza productos comparando archivo nuevo vs antiguo del csv.'
 
     def add_arguments(self, parser):
         parser.add_argument(
