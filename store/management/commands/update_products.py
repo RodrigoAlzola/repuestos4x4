@@ -112,6 +112,7 @@ class Command(BaseCommand):
 
         products_not_found = []
         products_to_update = []
+        n_update = 0
         for index, row in df_nuevos_unique.iterrows():
             part_number = row['Numero de parte']
             
@@ -128,7 +129,7 @@ class Command(BaseCommand):
                 # product.recommended_quantities = row['Cant'] if pd.notna(row['Cant']) else ''
                 
                 products_to_update.append(product)
-
+                n_update += 1
             else:
                 products_not_found.append(part_number)
 
@@ -141,7 +142,7 @@ class Command(BaseCommand):
                 batch_size=500  # Procesa en lotes de 500
             )
         elapsed = time.time() - start_time
-        self.stdout.write(self.style.WARNING(f'⏱️  Productos Actualizados - Tiempo transcurrido: {timedelta(seconds=int(elapsed))}'))
+        self.stdout.write(self.style.WARNING(f'⏱️  Productos Actualizados {n_update} - Tiempo transcurrido: {timedelta(seconds=int(elapsed))}'))
 
 
         # ============ Cargar nuevos productos ============ #
@@ -320,6 +321,7 @@ class Command(BaseCommand):
             f'{"="*70}\n'
             f'⏱️  Tiempo total: {timedelta(seconds=int(total_time))} ({total_time:.2f} segundos)\n'
             f'{"="*70}\n'
-            f' - Productos no encontrado: {len(products_not_found)}\n'
+            f' - Productos actualizados: {n_update}\n'
             f' - Productos nuevos creados: {creados}\n'
+            f' - Productos no encontrado: {len(products_not_found)}\n'
         ))
