@@ -100,7 +100,7 @@ class Command(BaseCommand):
         # Filtrar productos que no existen (solo actualizar existentes)
         df_nuevos_unique = df_new[df_new['Numero de parte'].astype(str).isin(products_dict.keys())]
         # Eliminar duplicados
-        df_nuevos_unique = df_new.drop_duplicates(subset=['Numero de parte'], keep='first')
+        df_nuevos_unique = df_nuevos_unique.drop_duplicates(subset=['Numero de parte'], keep='first')
 
         # Filtrar productos que ya existen (solo crear nuevos)
         df_new_products = df_new[~df_new['Numero de parte'].astype(str).isin(products_dict.keys())]
