@@ -96,6 +96,7 @@ class Command(BaseCommand):
 
         # Obtener la Base de Datos: crear un diccionario para búsqueda O(1) en lugar de queries O(n)
         products_dict = {p.part_number: p for p in Product.objects.filter(provider=provider)}
+        self.stdout.write(f'🔍 Productos en BD con este provider: {len(products_dict)}')
 
         # Filtrar productos que no existen (solo actualizar existentes)
         df_nuevos_unique = df_new[df_new['Numero de parte'].astype(str).isin(products_dict.keys())]
