@@ -30,12 +30,24 @@ class Command(BaseCommand):
             
             # Conectar al servidor IMAP
             with MailBox(email_host).login(email_user, email_password) as mailbox:
-                # Buscar emails no leídos con archivos adjuntos
-                criteria = AND(seen=False, subject=subject_filter)
-                messages = list(mailbox.fetch(criteria))
-                
+                criteria = AND(seen=False)
+                all_unread = list(mailbox.fetch(criteria))
+
+                self.stdout.write(f'🔍 Total emails no leídos: {len(all_unread)}')
+
+                # Mostrar asuntos de todos los no leídos
+                for msg in all_unread:
+                    self.stdout.write(f'   📧 Asunto: "{msg.subject}"')
+
+                # Filtrar manualmente
+                messages = []
+                for msg in all_unread:
+                    if subject_filter.lower() in msg.subject.lower():
+                        messages.append(msg)
+                        self.stdout.write(f'   ✅ MATCH: "{msg.subject}"')
+
                 if not messages:
-                    self.stdout.write(self.style.WARNING('📭 No hay emails nuevos para procesar'))
+                    self.stdout.write(self.style.WARNING(f'📭 No hay emails que coincidan con: "{subject_filter}"'))
                     return
                 
                 self.stdout.write(self.style.SUCCESS(f'📬 Se encontraron {len(messages)} email(s) nuevos'))
