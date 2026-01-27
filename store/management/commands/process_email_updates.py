@@ -99,7 +99,7 @@ class Command(BaseCommand):
                     # Marcar como leído si se procesó correctamente
                     if processed and options['mark_as_read']:
                         mailbox.flag(msg.uid, ['\\Seen'], True)
-                        self.stdout.write('✉️  Email marcado como leído')
+                        self.stdout.write('✉️ Email marcado como leído')
                 
                 self.stdout.write(self.style.SUCCESS('\n✅ Proceso completado'))
                 
