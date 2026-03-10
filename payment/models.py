@@ -129,10 +129,10 @@ class Order(models.Model):
             
             # Generar buy_order basado en ID y fecha
             if is_new:
-                # Formato: 4X4-YYYYMMDD-XXXXXX
-                # Ejemplo: 4X4-20241223-000001
+                # Formato: YYYYMMDD-XXXXXX
+                # Ejemplo: 20241223-000001
                 date_str = self.date_order.strftime('%Y%m%d')
-                self.buy_order = f"4X4-{date_str}-{self.id:06d}"
+                self.buy_order = f"{date_str}-{self.id:06d}"
                 super().save(update_fields=['buy_order'])
         else:
             super().save(*args, **kwargs)
