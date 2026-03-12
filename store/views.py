@@ -494,7 +494,7 @@ def all_products(request):
     search_query = request.GET.get('search', '')
 
     # Base de productos con stock
-    products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0))
+    products = Product.objects.filter(Q(stock__gt=0) | Q(stock_international__gt=0)).exclude(Q(name__isnull=True) | Q(name__exact=''))
 
     # Aplicar búsqueda
     if search_query:
