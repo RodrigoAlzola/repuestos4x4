@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /cart/
+Disallow: /payment/
+
+Sitemap: https://4x4max.cl/sitemap.xml

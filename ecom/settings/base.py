@@ -10,6 +10,10 @@ DEBUG = True
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Region and language settings
+LANGUAGE_CODE = 'es-cl'
+TIME_ZONE = 'America/Santiago'
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -18,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     'store',
     'cart',
     'payment',

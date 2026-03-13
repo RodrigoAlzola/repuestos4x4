@@ -1,13 +1,26 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="description" content="" />
-        <meta name="author" content="" />
-        <title>4x4 MAX</title>
+        <meta name="description" content="{% block meta_description %}Tienda online de repuestos y accesorios 4x4 off road en Chile. Envíos a todo el país. Suzuki, Toyota, Jeep, Ford y más.{% endblock %}" />
+        <meta name="author" content="4x4MAX" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://4x4max.cl{{ request.path }}" />
+
+        <!-- Open Graph (Facebook, WhatsApp) -->
+        <meta property="og:title" content="{% block og_title %}4x4MAX - Repuestos y Accesorios 4x4 Chile{% endblock %}" />
+        <meta property="og:description" content="{% block og_description %}Tienda online de repuestos y accesorios 4x4 en Chile. Envíos a todo el país.{% endblock %}" />
+        <meta property="og:image" content="{% block og_image %}https://4x4max.cl/static/images/logo.png{% endblock %}" />
+        <meta property="og:url" content="https://4x4max.cl{{ request.path }}" />
+        <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+        <meta property="og:locale" content="es_CL" />
+        <meta property="og:site_name" content="4x4MAX" />
+
+        <title>{% block title %}4x4MAX - Repuestos y Accesorios 4x4 Chile{% endblock %}</title>
+
         <!-- Favicon-->
         <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.png' %}" />
         <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon.png' %}" />

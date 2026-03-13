@@ -1,6 +1,13 @@
 {% extends 'base.html' %}
 {% load custom_filters %}
 
+{% block title %}{{ product.name }} | 4x4MAX Chile{% endblock %}
+{% block meta_description %}{{ product.description|default:"Repuesto 4x4" }} - SKU: {{ product.part_number }}. Compra online en 4x4MAX con envío a todo Chile.{% endblock %}
+{% block og_title %}{{ product.name }} | 4x4MAX{% endblock %}
+{% block og_description %}{{ product.description|default:"Repuesto 4x4" }} - Compra online en 4x4MAX Chile{% endblock %}
+{% block og_image %}{{ product.image }}{% endblock %}
+{% block og_type %}product{% endblock %}
+
 {% block content %}
 
 <div class="container">
@@ -323,5 +330,34 @@ document.getElementById('back-button').addEventListener('click', function() {
   window.history.back();
 });
 </script>
+
+<!-- Structured Data for Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ product.name|escapejs }}",
+  "description": "{{ product.description|default:'Repuesto 4x4'|escapejs }}",
+  "image": "{{ product.image }}",
+  "sku": "{{ product.part_number }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "4x4MAX"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "https://4x4max.cl{{ request.path }}",
+    "priceCurrency": "CLP",
+    "price": "{% if product.is_sale %}{{ product.sale_price }}{% else %}{{ product.price }}{% endif %}",
+    "availability": "{% if product.stock > 0 or product.stock_international > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+    "seller": {
+      "@type": "Organization",
+      "name": "4x4MAX"
+    }
+  }
+}
+</script>
+
+{% endblock %}
 
 {% endblock %}

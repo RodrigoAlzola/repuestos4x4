@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
+from django.http import HttpResponse
 from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
 from payment.forms import ShippingForm
 from payment.models import ShippingAddress
@@ -764,4 +765,16 @@ def search(request):
             return render(request, 'search.html', {"searched": searched})
     else:
         return render(request, 'search.html', {})
-    
+
+
+def robots_txt(request):
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin/",
+        "Disallow: /cart/",
+        "Disallow: /payment/",
+        "",
+        "Sitemap: https://4x4max.cl/sitemap.xml",
+    ]
+    return HttpResponse("\n".join(lines), content_type='text/plain')

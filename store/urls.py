@@ -19,4 +19,5 @@ urlpatterns = [
     path('get-dynamic-filters/', views.get_dynamic_filters, name='get_dynamic_filters'),
     path('category_summary/', views.category_summary, name='category_summary'),
     path('search/', views.search, name='search'),
+    path('robots.txt', views.robots_txt, name='robots_txt'),
 ]
