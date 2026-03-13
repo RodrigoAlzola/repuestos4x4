@@ -778,3 +778,7 @@ def robots_txt(request):
         "Sitemap: https://4x4max.cl/sitemap.xml",
     ]
     return HttpResponse("\n".join(lines), content_type='text/plain')
+
+
+def google_verification(request):
+    return HttpResponse("google-site-verification: google1cb7d6c3308ad2c9.html", content_type='text/html')
