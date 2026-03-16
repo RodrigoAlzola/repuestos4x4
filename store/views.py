@@ -11,7 +11,7 @@ from payment.forms import ShippingForm
 from payment.models import ShippingAddress
 from django.contrib.auth import get_user_model
 from django import forms 
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Case, When, Value, IntegerField
 import json
 from cart.cart import Cart
 from django.views.decorators.cache import never_cache
@@ -527,7 +527,15 @@ def all_products(request):
     if selected_serie:
         products = products.filter(compatibilities__serie=selected_serie)
 
-    products = products.distinct().order_by('name')
+    products = products.distinct().annotate(
+    has_default_image=Case(
+        When(image='https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG', then=Value(1)),
+        When(image__isnull=True, then=Value(1)),
+        When(image='', then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField(),
+    )
+).order_by('has_default_image', 'name')
 
     # Paginación
     paginator = Paginator(products, 15)
