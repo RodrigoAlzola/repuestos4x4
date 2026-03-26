@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Política de Devoluciones{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h1 class="mb-4">Política de Devoluciones</h1>
+  <p class="text-muted">Última actualización: {% now "j F Y" %}</p>
+
+  <section class="mb-4">
+    <h2>1. Plazo para devoluciones</h2>
+    <p>
+      Aceptamos devoluciones dentro de los <strong>30 días calendario</strong> 
+      posteriores a la fecha de entrega del producto. Pasado ese plazo, 
+      no podremos procesar la devolución.
+    </p>
+  </section>
+
+  <section class="mb-4">
+    <h2>2. Condiciones del producto</h2>
+    <p>Para que una devolución sea aceptada, el producto debe:</p>
+    <ul>
+      <li>Estar en su estado original, sin uso.</li>
+      <li>Incluir el empaque original y todos sus accesorios.</li>
+      <li>Tener la etiqueta o sello sin remover.</li>
+    </ul>
+    <p>No se aceptan devoluciones de productos dañados por mal uso del cliente.</p>
+  </section>
+
+  <section class="mb-4">
+    <h2>3. Cómo iniciar una devolución</h2>
+    <p>Para solicitar una devolución, sigue estos pasos:</p>
+    <ol>
+      <li>Contáctanos a <a href="mailto:contacto@4x4max.cl" style="color: red;">contacto@4x4max.cl</a> con tu número de pedido.</li>
+      <li>Te enviaremos las instrucciones para devolver el producto.</li>
+      <li>Una vez recibido e inspeccionado, procesaremos el reembolso.</li>
+    </ol>
+  </section>
+
+  <section class="mb-4">
+    <h2>4. Reembolsos</h2>
+    <p>
+      Una vez aprobada la devolución, el reembolso se procesará en un plazo de 
+      <strong>5 a 10 días hábiles</strong> al mismo método de pago utilizado 
+      en la compra.
+    </p>
+  </section>
+
+  <section class="mb-4">
+    <h2>5. Productos dañados o incorrectos</h2>
+    <p>
+      Si recibiste un producto dañado o incorrecto, contáctanos de inmediato. 
+      Cubriremos los costos de envío de la devolución y te enviaremos un 
+      reemplazo sin costo adicional.
+    </p>
+  </section>
+
+  <section class="mb-4">
+    <h2>6. Gastos de envío</h2>
+    <p>
+      Los gastos de envío de la devolución corren por cuenta del cliente, 
+      excepto en casos de productos dañados o incorrectos.
+    </p>
+  </section>
+
+  <section class="mb-4">
+    <h2>7. Contacto</h2>
+    <p>
+      Si tienes alguna pregunta sobre esta política, puedes contactarnos en:<br>
+      📧 <a href="mailto:contacto@4x4max.cl" style="color: red;">contacto@4x4max.cl</a>
+    </p>
+  </section>
+</div>
+{% endblock %}

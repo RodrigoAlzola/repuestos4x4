@@ -21,4 +21,5 @@ urlpatterns = [
     path('search/', views.search, name='search'),
     path('robots.txt', views.robots_txt, name='robots_txt'),
     path('google1cb7d6c3308ad2c9.html', views.google_verification, name='google_verification'),
+    path('return-policy/', views.return_policy, name='return_policy'),
 ]

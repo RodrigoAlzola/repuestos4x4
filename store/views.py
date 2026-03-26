@@ -790,3 +790,7 @@ def robots_txt(request):
 
 def google_verification(request):
     return HttpResponse("google-site-verification: google1cb7d6c3308ad2c9.html", content_type='text/html')
+
+
+def return_policy(request):
+    return render(request, 'return_policy.html')
