@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand
 import pandas as pd
 from store.models import Category, Product, Compatibility, Provider
+from store.utils import verify_image_url, DEFAULT_PRODUCT_IMAGE
 import math
-import requests
 import time
 from datetime import timedelta
 
@@ -10,22 +10,6 @@ from datetime import timedelta
 def convertion(value):
     tarif = 1.23
     return math.ceil(value*tarif/100)*100
-
-def verify_image_url(url, default_url="https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"):
-    """Verifica si la URL de la imagen es válida, si no retorna la por defecto"""
-    if not url or url.strip() == "":
-        return default_url
-    
-    try:
-        response = requests.head(url, timeout=5, allow_redirects=True)
-        if response.status_code == 404:
-            return default_url
-        elif response.status_code == 200:
-            return url
-        else:
-            return default_url
-    except requests.exceptions.RequestException:
-        return default_url
 
 class Command(BaseCommand):
     help = 'Carga productos y compatibilidades desde un archivo CSV'
@@ -76,7 +60,7 @@ class Command(BaseCommand):
         df[string_columns] = df[string_columns].apply(lambda col: col.str.strip())
 
         # 3. Reemplazar imágenes vacías
-        default_image = "https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"
+        default_image = DEFAULT_PRODUCT_IMAGE
         df['Foto'] = df['Foto'].replace("", default_image)
 
         # 4. FILTRAR productos sin stock

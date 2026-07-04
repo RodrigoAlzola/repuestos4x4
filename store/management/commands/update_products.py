@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand
 import pandas as pd
 from store.models import Category, Product, Compatibility, Provider
+from store.utils import verify_image_url, DEFAULT_PRODUCT_IMAGE
 import math
-import requests
 import time
 from datetime import timedelta
 from django.db.models import F
@@ -16,29 +16,12 @@ def convertion(value):
 
     # Aplicar tarifa y dividir por 1000 para generar decimales
     precio_base = value * tarif / 1000
-    
+
     # Redondear a .0 o .5
     precio_redondeado = math.floor(precio_base * 2) / 2
-    
+
     # Multiplicar de vuelta por 1000
     return precio_redondeado * 1000
-
-
-def verify_image_url(url, default_url="https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"):
-    """Verifica si la URL de la imagen es válida, si no retorna la por defecto"""
-    if not url or url.strip() == "":
-        return default_url
-    
-    try:
-        response = requests.head(url, timeout=5, allow_redirects=True)
-        if response.status_code == 404:
-            return default_url
-        elif response.status_code == 200:
-            return url
-        else:
-            return default_url
-    except requests.exceptions.RequestException:
-        return default_url
 
 
 class Command(BaseCommand):
@@ -88,7 +71,7 @@ class Command(BaseCommand):
         df_new[string_columns] = df_new[string_columns].apply(lambda col: col.str.strip())
 
         # Imagen por defecto
-        default_image = "https://parts.terraintamer.com/images/DEFAULTPARTIMG.JPG"
+        default_image = DEFAULT_PRODUCT_IMAGE
         df_new['Foto'] = df_new['Foto'].replace("", default_image)
 
         # Filtrar productos sin stock
@@ -113,21 +96,29 @@ class Command(BaseCommand):
         products_not_found = []
         products_to_update = []
         n_update = 0
+        verified_images = {}
         for index, row in df_nuevos_unique.iterrows():
             part_number = row['Numero de parte']
-            
+
             # Búsqueda en diccionario (instantánea, sin query)
             product = products_dict.get(part_number)
-            
+
             if product:
                 product.price = convertion(float(row["Minorista"]))
                 product.stock = int(row["BR SOH"]) if pd.notna(row["BR SOH"]) else 0
                 product.stock_international = int(row["MELSOH"]) if pd.notna(row["MELSOH"]) else 0
 
+                # Si el CSV trae una foto distinta a la guardada, se re-verifica antes de aceptarla
+                new_image = row["Foto"] if pd.notna(row["Foto"]) else default_image
+                if not skip_image_check and new_image != product.image:
+                    if new_image not in verified_images:
+                        verified_images[new_image] = verify_image_url(new_image, default_image)
+                    product.image = verified_images[new_image]
+
                 # Por esta vez actualizar subcatory y recomended_auantities
                 # product.subcategory = row['Subgrupo'] if pd.notna(row['Subgrupo']) else ''
                 # product.recommended_quantities = row['Cant'] if pd.notna(row['Cant']) else ''
-                
+
                 products_to_update.append(product)
                 n_update += 1
             else:
@@ -137,8 +128,8 @@ class Command(BaseCommand):
         # Actualizar todo de una vez
         if products_to_update:
             Product.objects.bulk_update(
-                products_to_update, 
-                ['price', 'stock', 'stock_international'],
+                products_to_update,
+                ['price', 'stock', 'stock_international', 'image'],
                 batch_size=500  # Procesa en lotes de 500
             )
         elapsed = time.time() - start_time
@@ -148,7 +139,6 @@ class Command(BaseCommand):
         # ============ Cargar nuevos productos ============ #
         self.stdout.write(self.style.WARNING(f'⏱️  Iniciando carga de nuevos productos: '))
         creados = 0
-        verified_images = {}
         total_rows = len(df_new_products)
         new_products_preview = "0000"
         n = 0
