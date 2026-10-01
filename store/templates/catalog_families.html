@@ -1,0 +1,13 @@
+<section class="max-wrap max-family-filter" id="catalog-families" aria-labelledby="family-filter-title">
+  <div class="max-family-filter-heading">
+    <div><h2 id="family-filter-title">Filtra por familia</h2><p>Cantidades para tu búsqueda actual.</p></div>
+    <a class="max-family-all{% if not selected_family %} is-active{% endif %}" href="{{ all_families_url }}" {% if not selected_family %}aria-current="true"{% endif %}>Ver todos <span>{{ family_total }}</span></a>
+  </div>
+  <nav class="max-family-filter-grid" aria-label="Familias de repuestos">
+    {% for family in families %}
+      <a class="max-family-option{% if selected_family == family.slug %} is-active{% endif %}{% if not family.count %} is-empty{% endif %}" href="{{ family.url }}" {% if selected_family == family.slug %}aria-current="true"{% endif %}>
+        <span>{{ family.name }}</span><b>{{ family.count }}</b>
+      </a>
+    {% endfor %}
+  </nav>
+</section>

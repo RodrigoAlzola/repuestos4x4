@@ -1,0 +1,11 @@
+<div class="max-vehicle-fields" data-vehicle-fields data-endpoint="{% url 'vehicle_options' %}">
+{% for key, choices in options.items %}
+  <label>{% if key == 'brand' %}01 · Marca{% elif key == 'model' %}02 · Modelo{% elif key == 'serie' %}03 · Serie / chasis{% else %}04 · Motor{% endif %}
+    <select name="{{ key }}" data-field="{{ key }}" {% if key == 'model' and not vehicle.brand or key == 'serie' and not vehicle.model or key == 'motor' and not choices %}disabled{% endif %}>
+      <option value="">{% if key == 'brand' %}Elige marca{% elif key == 'model' %}Elige modelo{% elif key == 'serie' %}Todas{% else %}Todos{% endif %}</option>
+      {% for choice in choices %}<option value="{{ choice }}" {% if key == 'brand' and vehicle.brand == choice or key == 'model' and vehicle.model == choice or key == 'serie' and vehicle.serie == choice or key == 'motor' and vehicle.motor == choice %}selected{% endif %}>{{ choice }}</option>{% endfor %}
+    </select>
+  </label>
+{% endfor %}
+<p class="max-field-status" data-vehicle-status aria-live="polite"></p>
+</div>

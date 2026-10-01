@@ -1,0 +1,216 @@
+/* Identidad 4x4MAX: Montserrat, según manual_4x4.pdf.
+   Pesos: lectura 400, controles 500–700, títulos 700, precios 700.
+   Escala: título principal 52/38, secciones 34/29, lectura 17/16 px.
+   Presencia y contraste inspirados en Rhino; fuente y logo propios. */
+@font-face {
+  font-family: 'Montserrat';
+  src: url('../fonts/montserrat/Montserrat-variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --max-ink: #1f140f;
+  --max-muted: #4d4b4f;
+  --max-red: #e01f1a;
+  --max-line: #cfcdca;
+  --max-font: 'Montserrat', Arial, sans-serif;
+}
+
+body, button, input, select, textarea { font-family: var(--max-font); }
+body { font-size: 17px; font-weight: 400; line-height: 1.65; }
+.max-wordmark { display: flex; align-items: center; flex-shrink: 0; line-height: 1; }
+.max-wordmark img { display: block; width: 190px; height: auto; }
+.max-nav { min-height: 100px; }
+.max-topbar { font-size: 11px; font-weight: 600; letter-spacing: .8px; }
+.max-topbar span { color: #fff; }
+.max-desktop-nav, .max-nav-actions { font-size: 15px; font-weight: 700; }
+.max-desktop-nav { text-transform: uppercase; letter-spacing: .35px; }
+.max-user-nav { font-size: 14px; font-weight: 600; }
+.max-cart { border-color: var(--max-ink); }
+.max-cart span { font-size: 13px; font-weight: 700; }
+
+.max-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 1.1px; line-height: 1.6; }
+.max-hero, .max-hero > .max-wrap { min-height: 480px; }
+.max-hero { background-image: linear-gradient(90deg, rgba(31,20,15,.88), rgba(31,20,15,.48) 53%, rgba(31,20,15,.09)), url('../images/marketing/IMG-home.png'); }
+.max-hero-copy { max-width: 650px; padding-bottom: 50px; }
+.max-hero h1 { font-size: clamp(40px, 4vw, 52px); font-weight: 700; line-height: 1.14; letter-spacing: -1px; margin-bottom: 22px; text-shadow: 0 2px 14px #0003; }
+.max-hero .max-eyebrow { color: #fff; }
+.max-hero-copy > p:not(.max-eyebrow) { font-size: 17px; font-weight: 500; line-height: 1.7; max-width: 510px; color: #fff; }
+.max-text-link { font-size: 15px; font-weight: 700; }
+.max-hero-caption { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; }
+.max-selector h2 { font-size: 29px; font-weight: 700; letter-spacing: -.6px; }
+.max-selector-heading > p, .max-selected-label { font-size: 14px; font-weight: 500; }
+.max-vehicle-fields label, .max-filter-form > label { font-size: 13px; font-weight: 700; letter-spacing: 0; }
+.max-vehicle-fields select, .max-filter-form select, .max-filter-form input, .max-buy-form select { font-size: 16px; font-weight: 500; min-height: 51px; padding-inline: 12px; }
+.max-selector-row > .max-button { margin-top: 28px; }
+.max-button { font-size: 14px; font-weight: 700; line-height: 1.4; min-height: 51px; letter-spacing: .35px; text-transform: uppercase; }
+.max-help, .max-field-status { font-size: 13px; line-height: 1.7; }
+.max-benefits { font-size: 13px; font-weight: 600; }
+.max-benefits b { font-size: 11px; font-weight: 700; }
+
+.max-section-heading h2 { font-size: 34px; font-weight: 700; line-height: 1.25; letter-spacing: -.8px; }
+.max-section-heading > p { font-size: 16px; line-height: 1.65; max-width: 325px; }
+.max-section-heading > span { font-size: 14px; }
+.max-family { padding: 24px 22px; min-height: 265px; }
+.max-family h3 { font-size: 18px; font-weight: 700; line-height: 1.4; letter-spacing: -.25px; }
+.max-family p { font-size: 14px; font-weight: 400; line-height: 1.65; }
+.max-family-count { font-size: 13px; font-weight: 600; }
+.max-discovery h3 { font-size: 28px; font-weight: 700; line-height: 1.25; letter-spacing: -.6px; }
+.max-discovery .max-eyebrow { font-size: 11px; opacity: 1; }
+.max-discovery > p { font-size: 16px; line-height: 1.65; opacity: 1; }
+.max-discovery { min-height: 285px; }
+.max-product-info .max-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .8px; }
+.max-product-info h3 { font-size: 16px; font-weight: 650; line-height: 1.5; letter-spacing: -.15px; }
+.max-sku, .max-stock { font-size: 13px; line-height: 1.65; }
+.max-stock { color: #454d41; font-weight: 500; }
+.max-stock-local { color: #245735; }
+.max-product-bottom strong { font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
+.max-product-bottom del { font-size: 13px; }
+.max-sale { font-size: 11px; font-weight: 700; }
+.max-contact-band .max-eyebrow { font-size: 11px; color: #fff; }
+.max-contact-band h2 { font-size: 29px; font-weight: 700; line-height: 1.3; letter-spacing: -.6px; }
+.max-contact-band p:not(.max-eyebrow) { font-size: 16px; line-height: 1.7; color: #fff; }
+
+.max-list-header h1 { font-size: 42px; font-weight: 700; line-height: 1.2; letter-spacing: -.8px; }
+.max-list-header > p:not(.max-eyebrow) { font-size: 16px; }
+.max-sidebar { padding: 22px 18px; }
+.max-filter-form h2 { font-size: 22px; font-weight: 700; }
+.max-filter-form h3 { font-size: 17px; font-weight: 700; }
+.max-sidebar select { padding-inline: 8px; font-size: 15px; }
+.max-reset, .max-results-bar, .max-pagination { font-size: 14px; }
+.max-results-bar strong { font-weight: 700; }
+.max-empty h2 { font-size: 28px; font-weight: 700; line-height: 1.3; }
+.max-empty p { font-size: 16px; line-height: 1.7; }
+.max-breadcrumb { font-size: 13px; }
+.max-detail-copy h1 { font-size: 32px; font-weight: 700; line-height: 1.25; letter-spacing: -.6px; overflow-wrap: anywhere; }
+.max-detail-description, .max-applications > p { font-size: 16px; line-height: 1.7; }
+.max-compatibility { font-size: 15px; line-height: 1.6; }
+.max-compatibility strong { font-weight: 700; }
+.max-compatibility small { font-size: 13px; line-height: 1.65; }
+.max-detail-price { font-size: 34px; font-weight: 700; letter-spacing: -.7px; }
+.max-detail-price small { font-size: 12px; }
+.max-detail-price del { font-size: 15px; }
+.max-buy-form label, .max-buy-form > p { font-size: 14px; }
+.max-consult { font-size: 15px; font-weight: 700; border-color: var(--max-ink); }
+.max-table-scroll table, .max-specs dl { font-size: 15px; }
+.max-table-scroll th, .max-specs dt { font-weight: 700; }
+.max-specs h2 { font-size: 28px; font-weight: 700; }
+.footer-text p { font-size: 14px; line-height: 1.8; }
+.footer-text small { font-size: 13px; }
+
+/* Limpieza y vehículos recientes, junto al selector. */
+.max-family-filter { margin-bottom: 28px; }
+.max-family-filter-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+.max-family-filter-heading h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+.max-family-filter-heading p { font-size: 13px; color: var(--max-muted); margin: 0; }
+.max-family-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.max-family-option, .max-family-all { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 12px 16px; border: 1px solid var(--max-line); background: #f4f2ee; font-size: 14px; font-weight: 700; line-height: 1.4; }
+.max-family-option b, .max-family-all span { font-size: 12px; background: #fff; padding: 4px 8px; border-radius: 3px; min-width: 28px; text-align: center; }
+.max-family-option:not(.is-empty):not(.is-active) { background: #fff7f6; border-color: #df7168; box-shadow: inset 3px 0 0 var(--max-red); }
+.max-family-option:not(.is-empty):not(.is-active) b { background: #fbe3e1; color: #a91e18; }
+.max-family-option.is-empty { color: #666063; background: #f8f8f8; border-color: #ddd9d7; }
+.max-family-option.is-empty b { background: #efedec; }
+.max-family-option:hover, .max-family-all:hover { border-color: var(--max-ink); }
+.max-family-option:not(.is-empty):not(.is-active):hover { background: #ffefec; border-color: var(--max-red); }
+.max-wrap .max-family-option.is-active, .max-wrap .max-family-all.is-active { background: var(--max-ink); color: #fff; border-color: var(--max-ink); }
+.max-family-option.is-active b, .max-family-all.is-active span { background: #ffffff24; }
+.max-family-option:focus-visible, .max-family-all:focus-visible { outline: 3px solid var(--max-ink); outline-offset: 3px; }
+.max-filter-details > summary { display: none; }
+.max-selector-tools { display: flex; gap: 20px; align-items: center; justify-content: space-between; margin-top: 14px; }
+.max-selector-tools .max-help { margin: 0; }
+.max-clear-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 6px; min-height: 44px; padding: 8px 15px; border: 1px solid var(--max-ink); background: #fff; color: var(--max-ink); font-size: 13px; font-weight: 700; text-decoration: none; border-radius: 3px; }
+.max-clear-button:hover { background: var(--max-ink); color: #fff; }
+.max-garage { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--max-line); }
+.max-garage[hidden] { display: none; }
+.max-garage-heading { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.max-garage-heading h3, .max-filter-form .max-garage-heading h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.max-garage-heading span, .max-garage-empty, .max-garage-status { font-size: 12px; color: var(--max-muted); line-height: 1.65; margin: 0; }
+.max-garage-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.max-garage-chip { display: flex; align-items: stretch; max-width: 100%; min-width: 0; background: #f4f2ee; border: 1px solid var(--max-line); border-radius: 3px; }
+.max-garage-chip a { display: flex; align-items: center; color: var(--max-ink); text-decoration: none; font-size: 13px; font-weight: 700; min-height: 44px; padding: 10px 12px; overflow-wrap: anywhere; }
+.max-garage-chip a:hover { color: var(--max-red); }
+.max-garage-chip button { width: 44px; min-width: 44px; border: 0; border-left: 1px solid var(--max-line); border-radius: 0 3px 3px 0; background: transparent; color: var(--max-ink); font-size: 22px; padding: 0; }
+.max-garage-chip button:hover { background: #e8e3dc; }
+.max-garage-status:not(:empty) { margin-top: 10px; }
+.max-sidebar .max-clear-button { width: 100%; margin-top: 10px; }
+.max-sidebar .max-garage { margin-bottom: 20px; }
+.max-sidebar .max-garage-chip { width: 100%; }
+.max-sidebar .max-garage-chip a { flex: 1; }
+.max-clear-button:focus-visible, .max-garage-chip a:focus-visible, .max-garage-chip button:focus-visible { outline: 3px solid var(--max-ink); outline-offset: 3px; }
+
+@media (min-width: 781px) and (max-width: 1000px) {
+  .max-selector-row { flex-wrap: wrap; }
+  .max-selector-row > .max-vehicle-fields { flex-basis: 100%; }
+  .max-selector-row > .max-button { margin-top: 4px; }
+  .max-benefits { display: grid; grid-template-columns: repeat(2, 1fr); }
+  .max-family-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .max-list-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .max-discovery { padding: 24px; }
+}
+
+@media (max-width: 780px) {
+  .max-family-filter-heading { align-items: flex-start; }
+  .max-family-filter-heading h2 { font-size: 20px; }
+  .max-family-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .max-family-option, .max-family-all { padding: 10px; font-size: 12px; gap: 6px; }
+  .max-family-all { white-space: nowrap; }
+  .max-filter-details > summary { display: list-item; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .max-filter-details > summary span { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; color: var(--max-muted); }
+  .max-filter-details[open] > summary { margin-bottom: 22px; }
+  .max-selector-tools { flex-direction: column; align-items: stretch; gap: 12px; }
+  .max-garage-heading { gap: 4px 12px; }
+  .max-garage-chip { width: 100%; }
+  .max-garage-chip a { flex: 1; }
+  body { font-size: 16px; }
+  .max-nav { min-height: 86px; }
+  .max-wordmark img { width: 152px; }
+  .max-topbar { font-size: 9px; letter-spacing: .3px; }
+  .max-topbar span { font-size: 9px; letter-spacing: 0; }
+  .max-cart { font-size: 14px; padding: 8px 10px; }
+  .max-mobile-menu nav { font-size: 16px; font-weight: 600; }
+  .max-hero, .max-hero > .max-wrap { min-height: 465px; }
+  .max-hero-copy { max-width: 100%; padding-bottom: 40px; }
+  .max-hero h1 { font-size: 38px; font-weight: 700; line-height: 1.14; letter-spacing: -.8px; }
+  .max-hero-copy > p:not(.max-eyebrow) { font-size: 16px; line-height: 1.65; max-width: 360px; }
+  .max-eyebrow { font-size: 11px; letter-spacing: .8px; }
+  .max-selector { padding: 22px 18px; }
+  .max-selector h2 { font-size: 27px; font-weight: 700; }
+  .max-vehicle-fields { gap: 12px 10px; }
+  .max-vehicle-fields label { font-size: 12px; }
+  .max-selector-row > .max-button { margin-top: 3px; }
+  .max-selected-label { font-size: 13px; line-height: 1.65; }
+  .max-help { font-size: 12px; }
+  .max-benefits { font-size: 12px; line-height: 1.65; }
+  .max-section-heading h2 { font-size: 29px; font-weight: 700; line-height: 1.25; }
+  .max-family { padding: 20px 15px; min-height: 265px; }
+  .max-family h3 { font-size: 16px; line-height: 1.4; }
+  .max-family p { font-size: 14px; line-height: 1.65; }
+  .max-family-count { font-size: 12px; }
+  .max-discovery h3 { font-size: 27px; line-height: 1.25; }
+  .max-discovery { min-height: 265px; }
+  .max-product-info h3 { font-size: 14px; line-height: 1.5; }
+  .max-product-info .max-eyebrow { font-size: 10px; letter-spacing: .35px; }
+  .max-stock, .max-sku { font-size: 12px; }
+  .max-product-bottom strong { font-size: 19px; }
+  .max-product-bottom del { font-size: 12px; }
+  .max-product-bottom { gap: 6px; }
+  .max-contact-band h2 { font-size: 27px; line-height: 1.3; }
+  .max-list-header h1 { font-size: 33px; font-weight: 700; line-height: 1.25; }
+  .max-results-bar { font-size: 14px; }
+  .max-pagination { font-size: 13px; gap: 10px; flex-wrap: wrap; }
+  .max-detail-copy h1 { font-size: 28px; font-weight: 700; line-height: 1.25; }
+  .max-detail-price { font-size: 32px; }
+  .max-breadcrumb { font-size: 12px; }
+}
+
+@media (max-width: 370px) {
+  .max-wordmark img { width: 132px; }
+  .max-nav { gap: 8px; }
+  .max-product-bottom strong { font-size: 17px; }
+  .max-product-grid { gap: 10px; }
+  .max-hero h1 { font-size: 35px; }
+  .max-topbar { font-size: 8px; }
+  .max-topbar span { font-size: 8px; }
+}
