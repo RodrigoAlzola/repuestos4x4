@@ -1,0 +1,6 @@
+<div class="max-garage" data-vehicle-garage data-catalog-url="{% url 'all_products' %}" hidden>
+  <div class="max-garage-heading"><h3>Tus vehículos</h3><span>Los últimos 3 · en este navegador</span></div>
+  <div class="max-garage-list" data-garage-list aria-label="Accesos rápidos a tus vehículos"></div>
+  <p class="max-garage-status" data-garage-status role="status"></p>
+</div>
+{{ garage_config|json_script:"catalog-garage-data" }}

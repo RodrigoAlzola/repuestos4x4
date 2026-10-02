@@ -1,0 +1,30 @@
+{% load static %}
+<div class="max-topbar"><div class="max-wrap">REPUESTOS PARA IR MÁS LEJOS <span>Chile · Catálogo por vehículo</span></div></div>
+<header class="max-header">
+  <div class="max-wrap max-nav">
+    <a class="max-wordmark" href="{% url 'home' %}" aria-label="4x4MAX, inicio"><img src="{% static 'images/logo-brand.png' %}" alt="4x4MAX" width="190" height="88"></a>
+    <nav class="max-desktop-nav" aria-label="Navegación principal">
+      <a href="{% url 'home' %}#tu-vehiculo">Mi vehículo</a>
+      <a href="{% url 'all_products' %}">Catálogo</a>
+      <a href="{% url 'home' %}#descubre">Descubre</a>
+      <a href="{% url 'about' %}">Nosotros</a>
+    </nav>
+    <div class="max-nav-actions">
+      <a href="{% if user.is_authenticated %}{% url 'update_user' %}{% else %}{% url 'login' %}{% endif %}" class="max-account">{% if user.is_authenticated %}Mi cuenta{% else %}Ingresar{% endif %}</a>
+      {% if not user.is_authenticated %}<a href="{% url 'register' %}" class="max-account">Regístrate</a>{% endif %}
+      <a class="max-cart" href="{% url 'cart_summary' %}">Carro <span id="cart_quantity">{{ cart|length }}</span></a>
+    </div>
+    <details class="max-mobile-menu">
+      <summary aria-label="Abrir menú">☰</summary>
+      <nav aria-label="Navegación móvil">
+        <a href="{% url 'home' %}#tu-vehiculo">Mi vehículo</a>
+        <a href="{% url 'all_products' %}">Catálogo</a>
+        <a href="{% url 'home' %}#descubre">Descubre</a>
+        <a href="{% url 'about' %}">Nosotros</a>
+        <a href="{% if user.is_authenticated %}{% url 'update_user' %}{% else %}{% url 'login' %}{% endif %}">Mi cuenta</a>
+        {% if not user.is_authenticated %}<a href="{% url 'register' %}">Regístrate</a>{% endif %}
+      </nav>
+    </details>
+  </div>
+  {% if user.is_authenticated %}<div class="max-wrap max-user-nav"><a href="{% url 'update_user' %}">Mi cuenta</a><a href="{% url 'update_info' %}">Direcciones</a>{% if user.is_superuser %}<a href="{% url 'pending_orders_dash' %}">Pedidos pendientes</a><a href="{% url 'confirmed_orders_dash' %}">Confirmados</a><a href="{% url 'shipped_orders_dash' %}">Despachados</a>{% endif %}<a href="{% url 'logout' %}">Salir</a></div>{% endif %}
+</header>

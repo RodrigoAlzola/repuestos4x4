@@ -1,2 +1,12 @@
 .env
 create_admin_remote.py
+.venv/
+__pycache__/
+*.pyc
+var/
+local-backup-original/
+marketing-contact-sheet.jpg
+ecom/staticfiles/
+.pytest_cache/
+entrega-rodrigo/
+tmp/

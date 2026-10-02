@@ -5,21 +5,21 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="description" content="{% block meta_description %}Tienda online de repuestos y accesorios 4x4 off road en Chile. Envíos a todo el país. Suzuki, Toyota, Jeep, Ford y más.{% endblock %}" />
+        <meta name="description" content="{% block meta_description %}Repuestos, componentes reforzados y soluciones para mantener y mejorar tu 4x4. Explora el catálogo por vehículo en 4x4MAX Chile.{% endblock %}" />
         <meta name="author" content="4x4MAX" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://4x4max.cl{{ request.path }}" />
 
         <!-- Open Graph (Facebook, WhatsApp) -->
-        <meta property="og:title" content="{% block og_title %}4x4MAX - Repuestos y Accesorios 4x4 Chile{% endblock %}" />
-        <meta property="og:description" content="{% block og_description %}Tienda online de repuestos y accesorios 4x4 en Chile. Envíos a todo el país.{% endblock %}" />
+        <meta property="og:title" content="{% block og_title %}4x4MAX - Repuestos y mejoras para tu 4x4{% endblock %}" />
+        <meta property="og:description" content="{% block og_description %}Repuestos y soluciones para un 4x4 más fuerte. Encuentra componentes para mantenerlo, repararlo y mejorarlo.{% endblock %}" />
         <meta property="og:image" content="{% block og_image %}https://4x4max.cl/static/images/logo.png{% endblock %}" />
         <meta property="og:url" content="https://4x4max.cl{{ request.path }}" />
         <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
         <meta property="og:locale" content="es_CL" />
         <meta property="og:site_name" content="4x4MAX" />
 
-        <title>{% block title %}4x4MAX - Repuestos y Accesorios 4x4 Chile{% endblock %}</title>
+        <title>{% block title %}4x4MAX - Repuestos y mejoras para tu 4x4{% endblock %}</title>
 
         <!-- Favicon-->
         <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.png' %}" />
@@ -30,6 +30,11 @@
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
         <!-- Core theme CSS (includes Bootstrap)-->
         <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/catalog.css' %}" rel="stylesheet" />
+        <link rel="preload" href="{% static 'fonts/montserrat/Montserrat-variable.ttf' %}" as="font" type="font/ttf" crossorigin />
+        <link href="{% static 'css/typography.css' %}?v=20261001-3" rel="stylesheet" />
+        <script src="{% static 'js/catalog.js' %}?v=20261001" defer></script>
+        <script src="{% static 'js/garage.js' %}?v=20261001" defer></script>
         <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
         <style>
@@ -52,7 +57,7 @@
     <body>
         <div class="page-wrapper">
 
-            {% include 'navbar.html' %}
+            {% include 'catalog_nav.html' %}
 
             {% if messages %}
                 {% for message in messages %}
@@ -84,7 +89,7 @@
 
             <!-- Imagen -->
             <div class="footer-logo">
-                <img src="/media/marketing/emblema_positivo.jpg" alt="Logo" style="max-width: 120px; height: auto; border-radius: 15px;">
+                <img src="{% static 'images/marketing/emblema_positivo.jpg' %}" alt="Logo" style="max-width: 120px; height: auto; border-radius: 15px;">
             </div>
         </div>
     </div>

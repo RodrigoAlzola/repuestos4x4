@@ -1,0 +1,11 @@
+{% load static custom_filters %}
+<article class="max-product-card">
+  <a class="max-product-image" href="{% url 'product' product.id %}{% if vehicle_query %}?{{ vehicle_query }}{% endif %}">
+    {% if product.is_sale %}<span class="max-sale">OFERTA</span>{% endif %}
+    {% if product.image and 'DEFAULTPARTIMG' not in product.image %}<img src="{{ product.image }}" alt="{{ product.name }}" loading="lazy" data-fallback="{% static 'images/part-placeholder.svg' %}">{% else %}<img src="{% static 'images/part-placeholder.svg' %}" alt="Imagen de producto no disponible" loading="lazy">{% endif %}
+  </a>
+  <div class="max-product-info"><p class="max-eyebrow">{% if product.provider %}{{ product.provider.name|provider_label }}{% else %}REPUESTOS 4X4{% endif %}</p><h3><a href="{% url 'product' product.id %}{% if vehicle_query %}?{{ vehicle_query }}{% endif %}">{{ product.name }}</a></h3><p class="max-sku">SKU {{ product.part_number|default:product.sku }}</p>
+    <p class="max-stock {% if product.stock > 0 %}max-stock-local{% endif %}">{% if product.stock > 0 %}● Disponible en Chile{% elif product.stock_international > 0 %}○ Disponible por importación{% else %}Sin stock{% endif %}</p>
+    <div class="max-product-bottom"><strong>{% if product.is_sale %}<del>${{ product.price|currency_format }}</del> ${{ product.sale_price|currency_format }}{% else %}${{ product.price|currency_format }}{% endif %}</strong><a href="{% url 'product' product.id %}{% if vehicle_query %}?{{ vehicle_query }}{% endif %}" aria-label="Ver {{ product.name }}">↗</a></div>
+  </div>
+</article>
