@@ -23,7 +23,7 @@ with override_settings(
     call_command('collectstatic', interactive=False, verbosity=0)
     for name in ['css/catalog.css', 'css/typography.css', 'js/catalog.js', 'js/garage.js',
                  'fonts/montserrat/Montserrat-variable.ttf', 'images/logo-brand.png',
-                 'images/part-placeholder.svg', 'images/marketing/IMG-home.png',
+                 'images/part-placeholder.svg', 'images/marketing/IMG-home.jpg',
                  'images/marketing/emblema_positivo.jpg']:
         stored = staticfiles_storage.stored_name(name)
         assert staticfiles_storage.exists(stored), name
