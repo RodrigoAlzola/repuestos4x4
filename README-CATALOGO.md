@@ -6,6 +6,7 @@ Rama: `mejoras-catalogo-4x4max`. Base: `main`, commit `2e41189a8f9971581f6f6f67c
 
 - Portada con el concepto «Repuestos y soluciones para un 4x4 más fuerte». Los textos generales permiten incorporar otras marcas; cada tarjeta y ficha conserva su proveedor real.
 - Identidad 4x4MAX: logo original y Montserrat local, tamaños mayores, pesos firmes y mayor contraste. Detalles en `IDENTIDAD-WEB.md`; fuente y licencia en `ecom/static/fonts/montserrat/`.
+- Navegación con «Nosotros» en escritorio y móvil, y «Regístrate» para visitantes. «Mi cuenta» en el menú móvil lleva al perfil si existe sesión y a login si no; en tablet se usa el menú desplegable para conservar espacio.
 - Selector dependiente de marca, modelo, serie/chasis y motor informado. Botón «Limpiar filtros» en portada y catálogo.
 - Tres vehículos recientes guardados en el navegador, sin cuenta: se recuerdan al buscar marca y modelo válidos. Un clic abre sus repuestos; × quita un acceso. Una cuarta selección sustituye la más antigua. Limpiar conserva los accesos. Los datos no se sincronizan entre navegadores, dominios ni dispositivos.
 - Ocho familias visibles encima del catálogo con cantidades y «Ver todos». Conservan vehículo, texto y disponibilidad al cambiar familia y vuelven a la primera página. Las cantidades consideran los filtros actuales antes de restringir a una familia. Con repuestos: rojo suave; cero resultados: gris; seleccionada: fondo oscuro. En móvil, los filtros adicionales se despliegan en «Afinar búsqueda».

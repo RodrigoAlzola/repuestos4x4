@@ -140,6 +140,15 @@ body { font-size: 17px; font-weight: 400; line-height: 1.65; }
 .max-sidebar .max-garage-chip a { flex: 1; }
 .max-clear-button:focus-visible, .max-garage-chip a:focus-visible, .max-garage-chip button:focus-visible { outline: 3px solid var(--max-ink); outline-offset: 3px; }
 
+/* Reservar espacio para los enlaces restaurados también en tablets. */
+@media (max-width: 1000px) {
+  .max-desktop-nav, .max-account { display: none; }
+  .max-nav-actions { margin-left: auto; }
+  .max-mobile-menu { display: block; position: relative; }
+  .max-mobile-menu summary { cursor: pointer; list-style: none; font-size: 22px; padding: 5px; }
+  .max-mobile-menu nav { position: absolute; right: 0; top: 40px; background: #fff; border: 1px solid var(--max-line); padding: 20px; min-width: 190px; z-index: 5; display: flex; flex-direction: column; gap: 18px; font-size: 16px; font-weight: 600; }
+}
+
 @media (min-width: 781px) and (max-width: 1000px) {
   .max-selector-row { flex-wrap: wrap; }
   .max-selector-row > .max-vehicle-fields { flex-basis: 100%; }
