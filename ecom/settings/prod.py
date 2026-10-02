@@ -4,6 +4,10 @@ import os
 
 DEBUG = False
 
+# Railway no ejecuta collectstatic, así que STATIC_ROOT queda vacío: WhiteNoise
+# sirve los estáticos directamente desde las carpetas static/ del proyecto.
+WHITENOISE_USE_FINDERS = True
+
 SECRET_KEY = os.environ['SECRET_KEY']
 
 ALLOWED_HOSTS = [
