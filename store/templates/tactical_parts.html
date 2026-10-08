@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Repuestos para vehículos tácticos | 4x4MAX{% endblock %}
+{% block meta_description %}Referencias de admisión, filtración y frenos para vehículos tácticos. Busca por número de parte y consulta precios, disponibilidad y pedidos en 4x4MAX Chile.{% endblock %}
+{% block og_title %}Repuestos para vehículos tácticos | 4x4MAX{% endblock %}
+{% block og_description %}Admisión, filtración y frenos para vehículos tácticos. Referencias especiales a pedido o con stock limitado. Consulta por código de pieza.{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/tactical.css' %}">
+<script type="application/ld+json">{{ tactical_schema|safe }}</script>
+<div class="max-wrap max-tactical-page">
+  <nav class="max-tactical-breadcrumb" aria-label="Ruta de navegación"><a href="{% url 'home' %}">Inicio</a><span aria-hidden="true">/</span><span>Repuestos para vehículos tácticos</span></nav>
+  <section class="max-tactical-intro" aria-labelledby="tactical-title">
+    <div><p class="max-eyebrow">REFERENCIAS ESPECIALES</p><h1 id="tactical-title">Repuestos para<br>vehículos tácticos<span>.</span></h1><p class="max-tactical-lead">Admisión, filtración y frenos para vehículos tácticos. Encuentra la referencia que necesitas y consulta su precio y disponibilidad.</p><div class="max-tactical-summary"><span><strong>{{ reference_count }}</strong> referencias</span><span>Disponibilidad por confirmar</span></div></div>
+    <aside class="max-tactical-assistance"><p class="max-eyebrow">COTIZA POR REFERENCIA</p><h2>La pieza correcta<br>para tu vehículo.</h2><p>Indica el código, modelo y chasis. Te ayudamos a confirmar la aplicación y el plazo de entrega.</p><a class="max-button" href="{{ general_quote_url }}" target="_blank" rel="noopener">Consultar repuestos ↗</a></aside>
+  </section>
+  {% if stock_is_demo or demo_reference_count %}<p class="max-tactical-demo"><strong>Referencias sujetas a validación.</strong>{% if stock_is_demo %} Las cantidades de stock son datos de prueba.{% endif %}{% if demo_reference_count %} {{ demo_reference_count }} referencias son propuestas de prueba con códigos internos y compatibilidad por confirmar.{% endif %} La disponibilidad real se confirma al cotizar.</p>{% endif %}
+  <section id="referencias" class="max-tactical-references" aria-labelledby="references-title">
+    <div class="max-tactical-section-heading"><div><p class="max-eyebrow">CÓDIGOS Y APLICACIONES</p><h2 id="references-title">Repuestos y referencias.</h2></div><p>Precios y plazos de entrega a consultar.</p></div>
+    <form class="max-tactical-search" action="{% url 'tactical_parts' %}#referencias" method="get" role="search"><label for="tactical-search">Buscar por código, repuesto o aplicación</label><div><input id="tactical-search" name="q" type="search" value="{{ search_query }}" placeholder="Ej. PF35-DC, cáliper, snorkel" maxlength="160">{% if selected_family %}<input type="hidden" name="familia" value="{{ selected_family }}">{% endif %}<button class="max-button" type="submit">Buscar</button>{% if search_query or selected_family %}<a class="max-tactical-clear" href="{{ clear_url }}">Limpiar búsqueda</a>{% endif %}</div></form>
+    <nav class="max-tactical-families" aria-label="Familias de referencias">{% for family in families %}<a href="{{ family.url }}"{% if selected_family == family.slug %} aria-current="true"{% endif %}>{{ family.label }} <span>{{ family.count }}</span></a>{% endfor %}</nav>
+    <p class="max-tactical-result-count" role="status">{{ result_count }} referencia{{ result_count|pluralize:"s" }}{% if search_query %} para “{{ search_query }}”{% endif %}</p>
+    {% if references %}
+    <div class="max-tactical-table-wrap"><table class="max-tactical-table"><caption class="max-tactical-sr-only">Repuestos especiales: código, número de parte, descripción, aplicación, precio y disponibilidad.</caption><thead><tr><th scope="col">Imagen</th><th scope="col">Código / N.º de parte</th><th scope="col">Repuesto</th><th scope="col">Aplicación</th><th scope="col">Precio</th><th scope="col">Disponibilidad</th><th scope="col">Consulta</th></tr></thead><tbody>
+    {% for part in references %}<tr>
+      <td class="max-tactical-image-cell"><div class="max-tactical-image"><img src="{% static part.image_static %}" alt="{% if part.image %}{{ part.name }}{% else %}Imagen pendiente: {{ part.name }}{% endif %}" width="100" height="100" loading="lazy"></div><span class="max-tactical-image-note">{% if part.image %}Imagen referencial{% else %}Imagen pendiente{% endif %}</span></td>
+      <td class="max-tactical-code"><strong>{% if part.sku_pending %}Por confirmar{% else %}{{ part.sku }}{% endif %}</strong>{% if part.sku_pending %}<span class="max-tactical-pending">Número de parte por validar</span>{% endif %}</td>
+      <td class="max-tactical-description">{% if part.is_demo %}<span class="max-tactical-prototype">Referencia de prueba</span>{% endif %}<h3>{{ part.name }}</h3><p>{{ part.description }}</p>{% if part.notes %}<p class="max-tactical-part-note">{{ part.notes }}</p>{% endif %}</td>
+      <td class="max-tactical-application"><span class="max-tactical-mobile-label" aria-hidden="true">Aplicación</span>{{ part.application|default:"Por confirmar" }}</td>
+      <td class="max-tactical-price"><span class="max-tactical-mobile-label" aria-hidden="true">Precio</span><strong>{{ part.price_display }}</strong>{% if part.price != None %}<small>{{ part.vat_label }}</small>{% endif %}</td>
+      <td class="max-tactical-availability"><span class="max-tactical-status{% if part.availability == 'on_request' %} max-tactical-status-order{% endif %}">{{ part.availability_label }}</span>{% if part.availability == 'limited' %}<small>{{ part.stock }} unidad{{ part.stock|pluralize:"es" }}{% if part.stock_is_demo %} · demostración{% endif %}</small>{% endif %}</td>
+      <td class="max-tactical-quote"><a href="{{ part.quote_url }}" target="_blank" rel="noopener" aria-label="Cotizar {{ part.name }}">Cotizar ↗</a></td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="max-tactical-empty"><h3>{% if reference_count %}No encontramos esa referencia.{% else %}Consulta tu referencia.{% endif %}</h3><p>{% if reference_count %}Prueba con el número de parte, el nombre de la pieza o su aplicación.{% else %}Escríbenos el código o modelo de vehículo para consultar el repuesto.{% endif %}</p><a href="{% if reference_count %}{{ clear_url }}{% else %}{{ general_quote_url }}{% endif %}">{% if reference_count %}Ver todas las referencias{% else %}Consultar repuestos{% endif %} ↗</a></div>{% endif %}
+    <p class="max-tactical-order-note">La disponibilidad y los plazos se confirman al cotizar. Para pedidos especiales, indica modelo, versión y código de chasis.</p>
+  </section>
+  <div class="max-tactical-back"><a class="max-text-link" href="{% url 'all_products' %}">Explorar el catálogo general →</a></div>
+</div>
+{% endblock %}
