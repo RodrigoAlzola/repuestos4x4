@@ -1,10 +1,12 @@
 from django.urls import path
 from . import views
 from . import catalog_views
+from . import tactical_views
 
 urlpatterns = [
     path('', catalog_views.home, name='home'),
     path('vehicle-options/', catalog_views.options, name='vehicle_options'),
+    path('repuestos-vehiculos-tacticos/', tactical_views.references, name='tactical_parts'),
     path('about/', views.about, name='about'),
     path('login/', views.login_user, name='login'),
     path('logout/', views.logout_user, name='logout'),
