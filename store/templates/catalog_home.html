@@ -10,6 +10,7 @@
     <div class="max-selector-tools"><p class="max-help">Busca por la serie de tu vehículo. El filtro de motor muestra sólo los productos con ese dato informado.</p><a class="max-clear-button" href="{% url 'home' %}?clear_vehicle=1#tu-vehiculo">↺ Limpiar filtros</a></div>
     {% include 'catalog_garage.html' %}
   </form>
+  <p class="max-help"><a class="max-button" href="{% url 'tactical_parts' %}">Vehículos tácticos <span aria-hidden="true">↗</span></a></p>
 </section>
 <div class="max-wrap max-benefits"><span><b>01</b> Busca por tu vehículo</span><span><b>02</b> Stock local e internacional</span><span><b>03</b> Consulta compatibilidad</span><span><b>04</b> Despacho a todo Chile</span></div>
 <section class="max-wrap max-section" id="familias"><div class="max-section-heading"><div><p class="max-eyebrow">ENCUENTRA TU PRÓXIMA SOLUCIÓN</p><h2>¿Qué necesitas para tu 4x4?</h2></div><p>{% if vehicle_label %}{{ vehicle_count }} repuestos para tu selección.{% else %}Explora {{ catalog_count }} repuestos disponibles.{% endif %}</p></div><div class="max-family-grid">{% for family in families %}<a class="max-family" href="{% url 'all_products' %}?family={{ family.slug }}{% if vehicle_query %}&{{ vehicle_query }}{% endif %}"><span class="max-family-icon" aria-hidden="true">{{ family.icon }}</span><h3>{{ family.name }}</h3><p>{{ family.description }}</p><span class="max-family-count">{{ family.count }} repuestos <b>↗</b></span></a>{% endfor %}</div></section>
@@ -17,3 +18,4 @@
 <section class="max-wrap max-section"><div class="max-section-heading"><div><p class="max-eyebrow">KITS Y COMPONENTES PARA EXPLORAR</p><h2>{% if vehicle_label %}Descubre tu catálogo.{% else %}Conoce lo que tenemos.{% endif %}</h2></div><a class="max-text-link" href="{% url 'all_products' %}">Ver todo el catálogo →</a></div><div class="max-product-grid">{% for product in featured %}{% include 'catalog_card.html' %}{% empty %}<p>No hay productos disponibles para esta selección. <a href="{% url 'home' %}?clear_vehicle=1">Cambiar vehículo</a></p>{% endfor %}</div></section>
 <section class="max-wrap max-contact-band"><div><p class="max-eyebrow">LA PIEZA CORRECTA HACE LA DIFERENCIA</p><h2>Tu serie importa. Te ayudamos a encontrarla.</h2><p>Consulta con tu modelo, año, motor y código de chasis antes de comprar.</p></div><a class="max-button max-button-light" href="https://wa.me/56941815955?text=Hola%2C%20necesito%20ayuda%20para%20encontrar%20un%20repuesto%20para%20mi%204x4" target="_blank" rel="noopener">Consultar compatibilidad ↗</a></section>
 {% endblock %}
+
