@@ -125,6 +125,13 @@ class CatalogSearchTests(TestCase):
         response = self.listing(search='<script>alert(1)</script>')
         self.assertNotContains(response, '<script>alert(1)</script>')
 
+    def test_supplier_extra_systems_use_the_right_family_and_spanish_label(self):
+        for category, family, label in [('SUSPENSION KITS', 'suspension', 'Kits de suspensión'), ('INTAKE MANIFOLD', 'motor', 'Admisión'), ('TRANSMISSION AUTOMATIC', 'transmision', 'Transmisión automática')]:
+            product = Product.objects.create(sku=category, name='COMPONENT', category=Category.objects.create(name=category), stock=1)
+            response = self.listing(family=family, system=category)
+            self.assertIn(product.sku, self.codes(response))
+            self.assertContains(response, label)
+
     def test_import_updates_classification_without_changing_reference(self):
         fields = ['Numero de parte', 'Minorista', 'BR SOH', 'MELSOH', 'Foto', 'Grupo', 'Subgrupo']
         with tempfile.TemporaryDirectory() as folder:
