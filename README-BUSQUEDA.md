@@ -12,7 +12,7 @@ La búsqueda admite palabras en cualquier orden y sin tildes, sinónimos españo
 
 ## Validación
 
-- 35 pruebas Django de catálogo, búsqueda, clasificación, importación de metadatos, precios de oferta, filtros, aplicaciones, carro y página táctica.
+- 38 pruebas Django de catálogo, búsqueda, clasificación, importación de metadatos, precios de oferta, filtros, aplicaciones, carro y página táctica.
 - 3 pruebas JavaScript de vehículos recientes.
 - Revisión de escritorio/móvil y controles automáticos de la interfaz.
 - Prueba de volumen en una SQLite aislada con 16.200 productos sintéticos; no se publica ni se utiliza como inventario real. Los tiempos de ese equipo no garantizan tiempos en el servidor.
