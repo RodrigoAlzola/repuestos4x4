@@ -1,0 +1,5 @@
+<form class="max-direct-search" method="get" action="{% url 'all_products' %}">
+  <label for="home-part-search">Código, referencia o nombre del repuesto</label>
+  <div class="max-search-row"><input id="home-part-search" type="search" name="search" placeholder="Ej. retén, bomba de agua o código de pieza" maxlength="160" required><input type="hidden" name="scope" value="all"><button class="max-button" type="submit">Buscar repuesto →</button></div>
+  <p class="max-help">Busca directamente en todo el catálogo. También puedes seleccionar tu vehículo más abajo.</p>
+</form>
