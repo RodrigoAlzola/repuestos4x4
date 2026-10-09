@@ -26,6 +26,7 @@ SYSTEM_LABELS = {
 # completo en un retén individual. Los grupos ambiguos no se desdoblan a ciegas.
 PIECE_RULES = [
     ('kits', 'Kits de reparación y conjuntos', ('kit', 'kits', 'overhaul kit', 'juego', 'conjunto'), ()),
+    ('separadores', 'Separadores', (), ()),
     ('retenes', 'Retenes', ('oil seal', 'oilseal', 'seal', 'seals', 'reten', 'retenes', 'sello de aceite'), ('OIL SEAL', 'OIL SEALS', 'SEALS')),
     ('juntas', 'Juntas y empaquetaduras', ('gasket', 'gaskets', 'junta', 'juntas', 'empaquetadura'), ('GASKETS',)),
     ('radiadores', 'Radiadores', ('radiator', 'radiador', 'radiadores'), ('RADIATOR',)),
@@ -112,6 +113,9 @@ def searchable(products):
         condition = word_query('piece_text', terms) | Q(subcategory__in=subgroups)
         if key == 'kits':
             condition |= Q(category__name='SUSPENSION KITS')
+        if key == 'separadores':
+            # «SPACER ... SUITS PINION SEAL» describe un separador, no un retén.
+            condition = Q(name__iregex=r'^\s*(spacer|collapsible spacer|separador|separadores)([^a-z0-9]|$)')
         conditions.append(When(condition, then=Value(key)))
     return products.annotate(piece_type=Case(*conditions, default=Value('otros'), output_field=CharField()))
 
