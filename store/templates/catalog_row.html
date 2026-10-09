@@ -1,0 +1,7 @@
+{% load static custom_filters %}
+<article class="max-part-row">
+  <a class="max-row-image" href="{% url 'product' product.id %}{% if vehicle_query %}?{{ vehicle_query }}{% endif %}">{% if product.image and 'DEFAULTPARTIMG' not in product.image %}<img src="{{ product.image }}" alt="{{ product.name }}" loading="lazy" data-fallback="{% static 'images/part-placeholder.svg' %}">{% else %}<img src="{% static 'images/part-placeholder.svg' %}" alt="Imagen no disponible" loading="lazy">{% endif %}</a>
+  <div class="max-row-description"><h3><a href="{% url 'product' product.id %}{% if vehicle_query %}?{{ vehicle_query }}{% endif %}">{{ product.name }}</a></h3><p>Referencia <strong>{{ product.part_number|default:product.sku }}</strong></p><p>{{ product.catalog_type_label }} · {{ product.catalog_system_label }}</p><small>{% if product.provider %}{{ product.provider.name|provider_label }}{% else %}Repuestos 4x4{% endif %}</small></div>
+  <p class="max-stock {% if product.stock > 0 %}max-stock-local{% endif %}">{% if product.stock > 0 %}● Disponible en Chile{% elif product.stock_international > 0 %}○ Por importación{% else %}Sin stock disponible{% endif %}</p>
+  <div class="max-row-price">{% if product.is_sale %}<del>${{ product.price|currency_format }}</del><strong>${{ product.sale_price|currency_format }}</strong>{% else %}<strong>${{ product.price|currency_format }}</strong>{% endif %}<small>CLP</small><a href="{% url 'product' product.id %}{% if vehicle_query %}?{{ vehicle_query }}{% endif %}">Ver aplicaciones ↗</a></div>
+</article>

@@ -95,6 +95,7 @@ class Command(BaseCommand):
 
         products_not_found = []
         products_to_update = []
+        classification_categories = {category.name: category for category in Category.objects.all()}
         n_update = 0
         verified_images = {}
         for index, row in df_nuevos_unique.iterrows():
@@ -115,9 +116,16 @@ class Command(BaseCommand):
                         verified_images[new_image] = verify_image_url(new_image, default_image)
                     product.image = verified_images[new_image]
 
-                # Por esta vez actualizar subcatory y recomended_auantities
-                # product.subcategory = row['Subgrupo'] if pd.notna(row['Subgrupo']) else ''
-                # product.recommended_quantities = row['Cant'] if pd.notna(row['Cant']) else ''
+                # La clasificación comercial sigue el archivo recibido también
+                # para referencias existentes. Cabeceras ausentes se conservan.
+                if 'Subgrupo' in df_nuevos_unique.columns:
+                    product.subcategory = str(row['Subgrupo']).strip() if pd.notna(row['Subgrupo']) else ''
+                if 'Grupo' in df_nuevos_unique.columns and pd.notna(row['Grupo']):
+                    group = str(row['Grupo']).strip()
+                    if group:
+                        if group not in classification_categories:
+                            classification_categories[group], _ = Category.objects.get_or_create(name=group)
+                        product.category = classification_categories[group]
 
                 products_to_update.append(product)
                 n_update += 1
@@ -129,7 +137,7 @@ class Command(BaseCommand):
         if products_to_update:
             Product.objects.bulk_update(
                 products_to_update,
-                ['price', 'stock', 'stock_international', 'image'],
+                ['price', 'stock', 'stock_international', 'image', 'category', 'subcategory'],
                 batch_size=500  # Procesa en lotes de 500
             )
         elapsed = time.time() - start_time

@@ -2,7 +2,7 @@
 {% block title %}Repuestos y mejoras para tu 4x4 | 4x4MAX{% endblock %}
 {% block meta_description %}Repuestos, componentes reforzados y soluciones para mantener y mejorar tu 4x4. Busca por marca, modelo y serie en 4x4MAX Chile.{% endblock %}
 {% block content %}
-<section class="max-hero"><div class="max-wrap"><div class="max-hero-copy"><p class="max-eyebrow">EL SIGUIENTE CAMINO EMPIEZA AQUÍ</p><h1>Tu 4x4 tiene<br>mucho por delante<span>.</span></h1><p>Repuestos y soluciones para un 4x4 más fuerte. Encuentra lo que necesitas para mantenerlo, repararlo y mejorarlo.</p><a class="max-text-link" href="#tu-vehiculo">Encuentra lo que necesitas <span>↓</span></a></div><span class="max-hero-caption">MANTENER · REPARAR · MEJORAR</span></div></section>
+<section class="max-hero"><div class="max-wrap"><div class="max-hero-copy"><p class="max-eyebrow">EL SIGUIENTE CAMINO EMPIEZA AQUÍ</p><h1>Tu 4x4 tiene<br>mucho por delante<span>.</span></h1><p>Repuestos y soluciones para un 4x4 más fuerte. Encuentra lo que necesitas para mantenerlo, repararlo y mejorarlo.</p>{% include 'catalog_search_form.html' %}<a class="max-text-link" href="#tu-vehiculo">Buscar por mi vehículo <span>↓</span></a></div><span class="max-hero-caption">MANTENER · REPARAR · MEJORAR</span></div></section>
 <section class="max-wrap max-selector-section" id="tu-vehiculo">
   <form class="max-selector" action="{% url 'all_products' %}" method="get">
     <div class="max-selector-heading"><div><p class="max-eyebrow">TU VEHÍCULO, TU CATÁLOGO</p><h2>¿Qué 4x4 tienes?</h2></div>{% if vehicle_label %}<span class="max-selected-label">{{ vehicle_label }}</span>{% else %}<p>Menos búsqueda. Más caminos.</p>{% endif %}</div>

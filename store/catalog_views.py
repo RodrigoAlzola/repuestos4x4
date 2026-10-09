@@ -9,6 +9,8 @@ from django.views.decorators.http import require_GET
 from .models import Product
 from .catalog import (available_products, filter_vehicle, vehicle_from_request,
                       vehicle_options, family_counts, family_query, curated, discovery_cards)
+from .catalog_search import (searchable, apply_search, reference_key, ordered,
+                             facet_options, system_label, PIECE_LABELS)
 
 def context_for(request):
     vehicle = vehicle_from_request(request)
@@ -43,23 +45,37 @@ def home(request):
 def listing(request):
     products, context = context_for(request)
     family = request.GET.get('family', '')
-    search = request.GET.get('search', '').strip()
+    search = request.GET.get('search', '').strip()[:160]
     stock = request.GET.get('stock_type', '')
     sort = request.GET.get('sort', '')
-    # Conservar enlaces antiguos a categorías y subcategorías.
-    for field in ('category', 'subcategory'):
-        if request.GET.get(field):
-            products = products.filter(**{('category__name' if field == 'category' else field): request.GET[field]})
+    system = request.GET.get('system', request.GET.get('category', ''))
+    piece_type = request.GET.get('piece_type', '')
+    subcategory = request.GET.get('subcategory', '')
+    scope = 'all' if request.GET.get('scope') == 'all' or not context['vehicle'].get('brand') else 'vehicle'
+    per_page = int(request.GET.get('per_page', '24')) if request.GET.get('per_page', '24') in ('24', '48') else 24
+    view = 'grid' if request.GET.get('view') == 'grid' else 'list'
+    products = searchable(available_products() if scope == 'all' else products)
+    exact = False
     if search:
-        products = products.filter(Q(name__icontains=search) | Q(description__icontains=search) | Q(sku__icontains=search) | Q(part_number__icontains=search))
+        # Una referencia exacta no queda oculta por stock o un vehículo heredado.
+        key = reference_key(search)
+        references = searchable(Product.objects.exclude(name='').select_related('category', 'provider'))
+        references = references.filter(Q(sku_key=key) | Q(part_key=key)) if key else references.none()
+        if references.exists():
+            products, exact, scope = references, True, 'all'
+            family = system = piece_type = stock = subcategory = ''
+        else:
+            products = apply_search(products, search)
+    if subcategory:
+        products = products.filter(subcategory=subcategory)
     if stock == 'nacional':
         products = products.filter(stock__gt=0)
     elif stock == 'internacional':
         products = products.filter(stock__lte=0, stock_international__gt=0)
-    # Conteos dentro de la búsqueda actual, antes de restringir a una familia.
+    # Los conteos permiten cambiar familia sin conservar un sistema incompatible.
     families = family_counts(products)
     family_params = request.GET.copy()
-    for key in ('page', 'family', 'clear_vehicle'):
+    for key in ('page', 'family', 'system', 'category', 'subcategory', 'piece_type', 'clear_vehicle'):
         family_params.pop(key, None)
     for key in ('brand', 'model', 'serie', 'motor'):
         family_params[key] = context['vehicle'].get(key, '')
@@ -71,17 +87,51 @@ def listing(request):
     context.update(families=families, family_total=sum(item['count'] for item in families))
     if family:
         products = products.filter(family_query(family))
-    products = curated(products)
-    if sort in ('price', '-price'):
-        from django.db.models import Case, When, F
-        products = products.annotate(effective_price=Case(When(is_sale=True, then=F('sale_price')), default=F('price'))).order_by(('-' if sort.startswith('-') else '') + 'effective_price', 'pk')
-    page = Paginator(products, 12).get_page(request.GET.get('page'))
+    systems = facet_options(products, 'category__name', system_label)
+    if system:
+        products = products.filter(category__name=system)
+    types = facet_options(products, 'piece_type', lambda key: PIECE_LABELS[key])
+    if piece_type:
+        products = products.filter(piece_type=piece_type)
+    products = ordered(products, search, sort)
+    page = Paginator(products, per_page).get_page(request.GET.get('page'))
+    for item in page:
+        item.catalog_type_label = PIECE_LABELS[item.piece_type]
+        item.catalog_system_label = system_label(item.category.name) if item.category else ''
     params = request.GET.copy()
-    params.pop('page', None)
-    params.pop('clear_vehicle', None)
+    for key in ('page', 'clear_vehicle', 'category', 'family', 'system', 'piece_type', 'subcategory', 'stock_type'):
+        params.pop(key, None)
+    for key, value in [('family', family), ('system', system), ('piece_type', piece_type), ('subcategory', subcategory), ('stock_type', stock), ('scope', scope)]:
+        if value:
+            params[key] = value
+    for key in ('brand', 'model', 'serie', 'motor'):
+        params[key] = context['vehicle'].get(key, '')
+    chips = []
+    labels = {'family': next((f['name'] for f in families if f['slug'] == family), family),
+              'system': system_label(system) if system else '', 'piece_type': PIECE_LABELS.get(piece_type, piece_type),
+              'subcategory': subcategory, 'search': search,
+              'stock_type': {'nacional': 'Disponible en Chile', 'internacional': 'Por importación'}.get(stock, '')}
+    for key, label in labels.items():
+        if not label:
+            continue
+        removed = params.copy()
+        removed.pop(key, None)
+        if key == 'family':
+            for lower in ('system', 'piece_type', 'subcategory'):
+                removed.pop(lower, None)
+        if key == 'system':
+            removed.pop('piece_type', None)
+            removed.pop('subcategory', None)
+        chips.append({'label': label, 'url': f'{catalog_url}?{removed.urlencode()}#catalog-results'})
+    reset = params.copy()
+    for key in labels:
+        reset.pop(key, None)
     context.update(page_obj=page, search_query=search, selected_family=family,
                    selected_stock_type=stock, selected_sort=sort, pagination_query=params.urlencode(),
-                   selected_category=request.GET.get('category', ''), selected_subcategory=request.GET.get('subcategory', ''))
+                   selected_category=system, selected_subcategory=subcategory,
+                   system_options=systems, type_options=types, selected_piece_type=piece_type,
+                   search_scope=scope, exact_reference=exact, per_page=str(per_page), selected_view=view,
+                   filter_chips=chips, reset_search_url=f'{catalog_url}?{reset.urlencode()}#catalog-results')
     return render(request, 'catalog_list.html', context)
 
 @require_GET

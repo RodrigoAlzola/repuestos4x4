@@ -72,14 +72,14 @@ class CatalogTests(TestCase):
 
     def test_visible_families_keep_search_filters_and_reset_pagination(self):
         from urllib.parse import urlsplit, parse_qs
-        response = self.client.get(reverse('all_products'), {'brand': 'TOYOTA', 'model': 'HILUX', 'search': 'KIT1', 'stock_type': 'nacional', 'family': 'frenos', 'page': '2'})
+        response = self.client.get(reverse('all_products'), {'brand': 'TOYOTA', 'model': 'HILUX', 'search': 'Kit', 'stock_type': 'nacional', 'family': 'frenos', 'page': '2'})
         self.assertEqual(response.context['page_obj'].paginator.count, 0)
         self.assertEqual(response.context['family_total'], 1)
         suspension = next(item for item in response.context['families'] if item['slug'] == 'suspension')
         self.assertEqual(suspension['count'], 1)
         params = parse_qs(urlsplit(suspension['url']).query)
         self.assertEqual(params['brand'], ['TOYOTA'])
-        self.assertEqual(params['search'], ['KIT1'])
+        self.assertEqual(params['search'], ['Kit'])
         self.assertEqual(params['stock_type'], ['nacional'])
         self.assertEqual(params['family'], ['suspension'])
         self.assertNotIn('page', params)

@@ -3,10 +3,10 @@ from django.db.models import Q, Case, When, Value, IntegerField
 from .models import Product, Compatibility
 
 FAMILIES = [
-    {'slug': 'suspension', 'name': 'Suspensión', 'icon': '↟', 'description': 'Amortiguadores, ballestas y componentes para tu suspensión.', 'categories': ['SUSPENSION FRONT', 'SUSPENSION REAR']},
+    {'slug': 'suspension', 'name': 'Suspensión', 'icon': '↟', 'description': 'Amortiguadores, ballestas y componentes para tu suspensión.', 'categories': ['SUSPENSION FRONT', 'SUSPENSION REAR', 'SUSPENSION KITS']},
     {'slug': 'frenos', 'name': 'Frenos', 'icon': '◉', 'description': 'Discos, pastillas y componentes del sistema de frenado.', 'categories': ['BRAKE', 'BRAKE GR SPORT & ROGUE']},
-    {'slug': 'motor', 'name': 'Motor y refrigeración', 'icon': '⚙', 'description': 'Refrigeración, combustible y componentes de motor.', 'categories': ['ENGINE', 'COOLING', 'FUEL', 'EXHAUST', 'SNORKEL']},
-    {'slug': 'transmision', 'name': 'Transmisión y embrague', 'icon': '⇄', 'description': 'Embragues, cajas de cambio y cajas de transferencia.', 'categories': ['CLUTCH', 'GEARBOX', 'TRANSFER CASE', 'TRANSMISSION']},
+    {'slug': 'motor', 'name': 'Motor y refrigeración', 'icon': '⚙', 'description': 'Refrigeración, combustible y componentes de motor.', 'categories': ['ENGINE', 'COOLING', 'FUEL', 'EXHAUST', 'SNORKEL', 'INTAKE MANIFOLD']},
+    {'slug': 'transmision', 'name': 'Transmisión y embrague', 'icon': '⇄', 'description': 'Embragues, cajas de cambio y cajas de transferencia.', 'categories': ['CLUTCH', 'GEARBOX', 'TRANSFER CASE', 'TRANSMISSION', 'TRANSMISSION AUTOMATIC']},
     {'slug': 'tren-motriz', 'name': 'Ejes y diferenciales', 'icon': '⊕', 'description': 'Rodamientos, retenes, juntas y kits de diferencial.', 'categories': ['DIFF FRONT', 'DIFF REAR', 'DRIVELINE', 'FRONT AXLE', 'REAR AXLE', 'WHEEL']},
     {'slug': 'direccion', 'name': 'Dirección', 'icon': '↗', 'description': 'Componentes para reparar el sistema de dirección.', 'categories': ['STEERING']},
     {'slug': 'mantenimiento', 'name': 'Filtración y mantenimiento', 'icon': '≋', 'description': 'Filtros y kits para el servicio de tu vehículo.', 'categories': ['FILTERS', 'LUBRICATION']},

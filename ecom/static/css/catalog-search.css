@@ -1,0 +1,54 @@
+/* Búsqueda visible y comparación compacta, después de la tipografía comercial. */
+.max-direct-search{margin:22px 0;background:#fff;color:var(--max-ink);padding:18px;max-width:620px;border:1px solid var(--max-line)}
+.max-direct-search>label,.max-search-catalog form>label{display:block;font-size:14px;font-weight:700;margin-bottom:9px}
+.max-search-row{display:flex;gap:10px;align-items:stretch}
+.max-search-row input{min-width:0;flex:1;border:1px solid var(--max-line);background:#fff;padding:13px 14px;font-size:16px;font-family:inherit;color:var(--max-ink)}
+.max-search-row .max-button{white-space:nowrap;font-size:14px;gap:10px;padding:12px 18px}
+.max-direct-search .max-help{font-size:12px;color:#58615b;margin-top:10px}
+.max-hero-copy{max-width:710px;padding-top:30px;padding-bottom:90px}
+.max-hero>.max-wrap,.max-hero{min-height:600px}
+.max-list-header{padding-top:35px;padding-bottom:20px}
+.max-list-header h1{font-size:36px}
+.max-search-catalog{margin-bottom:35px}
+.max-search-scope{display:flex;gap:12px;align-items:center;margin:12px 0 22px;font-size:13px}
+.max-search-scope label{margin:0;white-space:nowrap}
+.max-search-scope select,.max-refine-fields select,.max-result-controls select{border:1px solid var(--max-line);background:#fff;color:var(--max-ink);font-family:inherit;font-size:14px;min-height:44px;padding:10px;width:100%;border-radius:0}
+.max-search-scope select{width:auto;max-width:100%}
+.max-refine-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.max-refine-fields label{font-size:13px;font-weight:700;min-width:0}
+.max-refine-fields select{display:block;margin-top:7px;font-weight:400}
+.max-refine-fields select:disabled{color:#747b75;background:var(--max-paper)}
+.max-reference-notice{background:#f7f0dd;padding:14px 18px;font-size:14px;line-height:1.7;border-left:3px solid #a77c28}
+.max-vehicle-refine{margin-top:18px;border-bottom:1px solid var(--max-line);padding-bottom:18px}
+.max-vehicle-refine summary{font-size:14px;font-weight:600;cursor:pointer;overflow-wrap:anywhere}
+.max-vehicle-refine[open]>.max-selector-row{margin-top:20px}
+.max-active-filters{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:16px 0 22px;font-size:13px}
+.max-active-filters>a:not(.max-reset-search){padding:9px 12px;background:#faeded;color:#992020;overflow-wrap:anywhere}
+.max-active-filters>a span{margin-left:12px;font-weight:700}
+.max-active-filters .max-reset-search{padding:9px 3px;text-decoration:underline;color:#5a625c}
+.max-search-results-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:16px;font-size:14px;padding-top:10px}
+.max-search-results-bar>div:first-child{display:flex;flex-direction:column;gap:7px}
+.max-search-results-bar span{color:var(--max-muted);font-size:13px}
+.max-result-controls{display:flex;align-items:flex-end;gap:14px}
+.max-result-controls label{font-size:12px;font-weight:600;min-width:0}
+.max-result-controls select{display:block;margin-top:6px}
+.max-part-list{border-top:1px solid var(--max-line)}
+.max-part-row{display:grid;grid-template-columns:82px minmax(0,1fr) 165px 180px;gap:20px;align-items:center;padding:18px 8px;border-bottom:1px solid var(--max-line)}
+.max-row-image{display:flex;align-items:center;justify-content:center;background:var(--max-paper);height:82px;padding:7px}
+.max-row-image img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
+.max-row-description{min-width:0}
+.max-row-description h3{font-size:15px;line-height:1.5;font-weight:700;margin:0 0 7px;overflow-wrap:anywhere}
+.max-row-description p{font-size:12px;margin:4px 0;color:#58615b;overflow-wrap:anywhere}
+.max-row-description small{font-size:11px;color:var(--max-muted)}
+.max-part-row .max-stock{font-size:13px;margin:0;line-height:1.7}
+.max-row-price{text-align:right;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.max-row-price strong{font-size:21px;font-weight:700}
+.max-row-price small,.max-row-price del{font-size:12px;color:var(--max-muted)}
+.max-row-price a{font-size:12px;text-decoration:underline;padding-block:7px}
+.max-search-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.max-family-explore{margin-bottom:40px}
+.max-family-explore>summary{font-size:14px;font-weight:600;cursor:pointer}
+.max-family-explore .max-wrap{width:100%;margin-top:18px}
+@media(max-width:1000px){.max-result-controls{gap:8px}.max-part-row{grid-template-columns:70px minmax(0,1fr) 145px;gap:14px}.max-part-row>.max-stock{grid-column:2;grid-row:2}.max-row-price{grid-column:3;grid-row:1/3}.max-search-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:780px){.max-refine-fields{grid-template-columns:1fr 1fr;gap:12px}.max-search-results-bar{align-items:stretch;flex-direction:column;gap:14px}.max-result-controls{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);width:100%}.max-search-row{flex-wrap:wrap}.max-search-row .max-button{min-height:46px}.max-direct-search{padding:15px}.max-hero-copy{padding-bottom:70px}.max-hero>.max-wrap,.max-hero{min-height:680px}.max-search-grid{grid-template-columns:1fr 1fr}.max-list-header h1{font-size:30px}.max-search-scope select,.max-refine-fields select,.max-result-controls select{font-size:16px}.max-part-row{grid-template-columns:60px minmax(0,1fr) 120px;gap:12px}.max-row-image{height:60px}.max-row-price strong{font-size:19px}}
+@media(max-width:540px){.max-refine-fields{grid-template-columns:1fr}.max-search-row input{width:100%;flex-basis:100%}.max-search-row .max-button{width:100%}.max-search-scope{align-items:flex-start;flex-direction:column;gap:7px}.max-search-scope select{width:100%}.max-part-row{grid-template-columns:58px minmax(0,1fr);gap:12px;padding-block:16px}.max-row-description h3{font-size:14px}.max-part-row>.max-stock{grid-column:1/-1;grid-row:auto;font-size:12px}.max-row-price{grid-column:1/-1;grid-row:auto;text-align:left;display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px 14px}.max-row-price a{margin-left:auto}.max-result-controls{grid-template-columns:1fr 1fr}.max-result-controls>label:first-child{grid-column:1/-1}.max-search-grid{grid-template-columns:1fr}.max-hero>.max-wrap,.max-hero{min-height:730px}.max-direct-search>label{line-height:1.6}.max-vehicle-refine .max-selector-row>.max-button{margin-top:10px}.max-active-filters a{min-height:44px}.max-vehicle-refine .max-vehicle-fields{grid-template-columns:1fr}}
