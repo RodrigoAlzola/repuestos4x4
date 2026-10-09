@@ -18,6 +18,8 @@ SYSTEM_LABELS = {
     'STEERING': 'Dirección', 'FILTERS': 'Filtros', 'LUBRICATION': 'Lubricación',
     'AIR CONDITIONING': 'Aire acondicionado', 'BATTERIES': 'Baterías',
     'BODY PARTS': 'Carrocería', 'ELECTRICAL': 'Electricidad', 'ACCESSORIES': 'Accesorios',
+    'INTAKE MANIFOLD': 'Admisión', 'RECOVERY': 'Recuperación y rescate',
+    'SUSPENSION KITS': 'Kits de suspensión', 'TRANSMISSION AUTOMATIC': 'Transmisión automática',
 }
 
 # Primero los kits: una descripción que enumera retenes no convierte el kit
@@ -108,6 +110,8 @@ def searchable(products):
     conditions = []
     for key, _, terms, subgroups in PIECE_RULES[:-1]:
         condition = word_query('piece_text', terms) | Q(subcategory__in=subgroups)
+        if key == 'kits':
+            condition |= Q(category__name='SUSPENSION KITS')
         conditions.append(When(condition, then=Value(key)))
     return products.annotate(piece_type=Case(*conditions, default=Value('otros'), output_field=CharField()))
 
