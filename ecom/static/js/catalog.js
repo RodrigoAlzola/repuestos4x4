@@ -4,6 +4,26 @@ document.querySelectorAll('[data-catalog-filters]').forEach(details => {
   mobile.addEventListener('change', event => { details.open = !event.matches; });
 });
 
+// Los controles visibles conservan la misma consulta y reinician la página.
+document.querySelectorAll('[data-auto-submit]').forEach(control => {
+  control.addEventListener('change', () => {
+    const form = control.form;
+    if (!form) return;
+    (control.dataset.resetFields || '').split(',').filter(Boolean).forEach(name => {
+      const field = form.elements.namedItem(name);
+      if (field) field.value = '';
+    });
+    form.requestSubmit();
+  });
+});
+document.querySelectorAll('[data-catalog-search]').forEach(form => {
+  form.addEventListener('submit', event => {
+    if (event.submitter?.matches('[data-vehicle-search]')) {
+      form.elements.namedItem('scope').value = 'vehicle';
+    }
+  });
+});
+
 document.querySelectorAll('img[data-fallback]').forEach(image => {
   const fallback = () => { if (image.dataset.fallback) { const source = image.dataset.fallback; delete image.dataset.fallback; image.src = source; } };
   image.addEventListener('error', fallback);
