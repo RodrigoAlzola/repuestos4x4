@@ -66,6 +66,26 @@ class CatalogSearchTests(TestCase):
         self.assertEqual(self.codes(response), [self.pump.sku])
         self.assertContains(response, 'Refrigeración')
 
+    def test_spacer_mentioning_seal_is_not_an_individual_seal(self):
+        spacer = Product.objects.create(sku='41231-60030TT', name='SPACER COLLAPSIBLE PINION BEARING SUITS 38MM PINION SEAL', category=self.front, subcategory='PINIONS', stock=1)
+        self.seal.description = 'Fits the original spacer and housing'
+        self.seal.save()
+        self.assertNotIn(spacer.sku, self.codes(self.listing(system='DIFF FRONT', piece_type='retenes')))
+        self.assertIn(self.seal.sku, self.codes(self.listing(system='DIFF FRONT', piece_type='retenes')))
+        self.assertEqual(self.codes(self.listing(piece_type='separadores')), [spacer.sku])
+
+    def test_water_pump_accessories_and_belts_are_separate_from_pumps(self):
+        belt = Product.objects.create(sku='3PK728TT', name='BELT WATER PUMP 2.0L YN2S ENGINE', category=self.cooling, subcategory='BELTS', stock=1)
+        flange = Product.objects.create(sku='90116-08112', name='BRIDA DE LA BOMBA DE AGUA', category=self.cooling, subcategory='WATER PUMP', stock=1)
+        self.assertEqual(self.codes(self.listing(system='COOLING', piece_type='bombas-agua')), [self.pump.sku])
+        self.assertEqual(self.codes(self.listing(piece_type='correas')), [belt.sku])
+        self.assertEqual(self.codes(self.listing(piece_type='accesorios-refrigeracion')), [flange.sku])
+
+    def test_supplier_hose_subgroup_precedes_radiator_mentions(self):
+        hose = Product.objects.create(sku='HOSE-1', name='RADIATOR HOSE LOWER', description='Fits the radiator', category=self.cooling, subcategory='HOSES', stock=1)
+        self.assertEqual(self.codes(self.listing(piece_type='mangueras')), [hose.sku])
+        self.assertNotIn(hose.sku, self.codes(self.listing(piece_type='radiadores')))
+
     def test_exact_reference_ignores_old_vehicle_stock_and_piece_filters(self):
         self.listing(brand='TOYOTA', model='LAND CRUISER', serie='HZJ79')
         response = self.listing(search='NOS001', family='motor', system='COOLING', piece_type='radiadores', stock_type='nacional')

@@ -26,6 +26,8 @@ SYSTEM_LABELS = {
 # completo en un retén individual. Los grupos ambiguos no se desdoblan a ciegas.
 PIECE_RULES = [
     ('kits', 'Kits de reparación y conjuntos', ('kit', 'kits', 'overhaul kit', 'juego', 'conjunto'), ()),
+    ('separadores', 'Separadores', (), ()),
+    ('accesorios-refrigeracion', 'Accesorios de refrigeración', (), ()),
     ('retenes', 'Retenes', ('oil seal', 'oilseal', 'seal', 'seals', 'reten', 'retenes', 'sello de aceite'), ('OIL SEAL', 'OIL SEALS', 'SEALS')),
     ('juntas', 'Juntas y empaquetaduras', ('gasket', 'gaskets', 'junta', 'juntas', 'empaquetadura'), ('GASKETS',)),
     ('radiadores', 'Radiadores', ('radiator', 'radiador', 'radiadores'), ('RADIATOR',)),
@@ -90,7 +92,7 @@ def code_sql(field):
         expression = Replace(expression, Value(char), Value(''))
     return expression
 
-def word_query(field, terms):
+def word_query(field, terms, leading=False):
     variants = []
     accented = {'reten': ('retén', 'retÉn'), 'retenes': ('reténes', 'retÉnes'),
                 'rotula': ('rótula', 'rÓtula'), 'cardan': ('cardán', 'cardÁn')}
@@ -98,20 +100,40 @@ def word_query(field, terms):
         variants.extend((normalize(term), *accented.get(normalize(term), ())))
     if not variants:
         return Q(pk__in=[])
-    pattern = r'(^|[^a-z0-9])(' + '|'.join(re.escape(term) for term in variants) + r')([^a-z0-9]|$)'
+    prefix = r'^\s*' if leading else r'(^|[^a-z0-9])'
+    pattern = prefix + '(' + '|'.join(re.escape(term) for term in variants) + r')([^a-z0-9]|$)'
     return Q(**{field + '__regex': pattern})
 
 def searchable(products):
     products = products.alias(
         catalog_text=normalized_sql(Concat(Value(' '), 'name', Value(' '), Coalesce('description', Value('')), Value(' '), Coalesce('subcategory', Value('')), Value(' '), Coalesce('category__name', Value('')), Value(' '), output_field=CharField())),
         piece_text=Lower(Concat(Value(' '), 'name', Value(' '), Coalesce('description', Value('')), Value(' '), output_field=CharField())),
+        piece_name=Lower('name'),
         sku_key=code_sql('sku'), part_key=code_sql('part_number'),
     )
-    conditions = []
+    conditions = [
+        When(word_query('piece_text', PIECE_RULES[0][2]) | Q(category__name='SUSPENSION KITS'), then=Value('kits')),
+        When(Q(name__iregex=r'^\s*(spacer|collapsible spacer|separador|separadores)([^a-z0-9]|$)'), then=Value('separadores')),
+        When(Q(category__name='COOLING') & (
+            Q(name__iregex=r'^\s*(brida|hub|polea|tap[oó]n|radiator cap|radiator shroud|fan shroud|radiator drain plug)([^a-z0-9]|$)') |
+            Q(name__istartswith='BOMBA DE AGUA DE POLEA')
+        ), then=Value('accesorios-refrigeracion')),
+    ]
+    # El Subgrupo explícito del proveedor precede a menciones secundarias.
+    # Los grupos mixtos se dejan para las reglas de texto que los desglosan.
+    for key, _, _, subgroups in PIECE_RULES[:-1]:
+        if subgroups and key != 'juntas-retenes':
+            conditions.append(When(Q(subcategory__in=subgroups), then=Value(key)))
+    for key, _, terms, _ in PIECE_RULES[:-1]:
+        if terms:
+            conditions.append(When(word_query('piece_name', terms, leading=True), then=Value(key)))
     for key, _, terms, subgroups in PIECE_RULES[:-1]:
         condition = word_query('piece_text', terms) | Q(subcategory__in=subgroups)
         if key == 'kits':
             condition |= Q(category__name='SUSPENSION KITS')
+        if key == 'separadores':
+            # «SPACER ... SUITS PINION SEAL» describe un separador, no un retén.
+            condition = Q(name__iregex=r'^\s*(spacer|collapsible spacer|separador|separadores)([^a-z0-9]|$)')
         conditions.append(When(condition, then=Value(key)))
     return products.annotate(piece_type=Case(*conditions, default=Value('otros'), output_field=CharField()))
 
